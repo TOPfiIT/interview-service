@@ -80,7 +80,7 @@ if __name__ == "__main__":
     print(build_response_system_prompt())
     response_user_prompt = build_response_user_prompt(
         VacancyInfo(profession="AI Developer", position="AI Developer",
-        requirements="AI Developer", questions="AI Developer", tasks=["AI Developer"], task_ides=["AI Developer"]),
+        requirements="AI Developer", questions="AI Developer", tasks=["AI Developer"], task_ides=["AI Developer"], interview_plan=""),
         [Message(role=RoleEnum.USER, type=TypeEnum.QUESTION, content="Hello, how are you?")],
         Task(type=TaskType.THEORY, language=None, description="Write a theory for the task")
     )

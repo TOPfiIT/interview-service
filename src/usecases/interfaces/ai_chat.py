@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-
+from typing import Generator
 from src.domain.message.message import Message
 from src.domain.metrics.metrics import Metrics
 from src.domain.task.task import Task
@@ -16,13 +16,13 @@ class AIChatBase(ABC):
         self,
         vacancy_info: VacancyInfo,
         chat_history: list[Message],
-    ) -> tuple[str, Task]:
+    ) -> tuple[VacancyInfo, Generator[str]]:
         """
         Create AI chat
 
         :param vacancy_info: Vacancy information
         :param chat_history: Chat history
-        :return: Welcome message and task
+        :return: Updated vacancy information and generator of response chunks
         """
         pass
 
