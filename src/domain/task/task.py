@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 from enum import Enum
-from domain.message.message import Message, RoleEnum, TypeEnum
+from src.domain.message.message import Message, RoleEnum, TypeEnum
 
 
 class TaskType(str, Enum):
