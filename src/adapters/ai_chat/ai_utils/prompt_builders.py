@@ -1,4 +1,3 @@
-from typing import List, Tuple
 from src.domain.message.message import Message, RoleEnum
 from src.domain.task.task import Task
 from src.domain.vacancy.vacancy import VacancyInfo
@@ -7,7 +6,7 @@ from src.domain.task.task import TaskType
 from src.domain.message.message import TypeEnum
 
 
-def _format_chat_history(chat_history: List[Message]) -> str:
+def _format_chat_history(chat_history: list[Message]) -> str:
     """
     Format chat history into a plain-text transcript for the LLM.
     """
@@ -33,7 +32,7 @@ def build_response_system_prompt() -> str:
 
 def build_response_user_prompt(
     vacancy_info: VacancyInfo,
-    chat_history: List[Message],
+    chat_history: list[Message],
     task: Task,
 ) -> str:
     """
@@ -60,9 +59,9 @@ def build_response_user_prompt(
 
 def build_response_prompts(
     vacancy_info: VacancyInfo,
-    chat_history: List[Message],
+    chat_history: list[Message],
     task: Task,
-) -> Tuple[str, str]:
+) -> tuple[str, str]:
     """
     Convenience wrapper that returns (system_prompt, user_prompt)
     """
@@ -75,6 +74,59 @@ def build_response_prompts(
     )
 
     return system_prompt, user_prompt
+
+def build_chat_plan_prompt(vacancy_info: VacancyInfo) -> str:
+    """
+    Build the prompt that asks the LLM to generate or update
+    VacancyInfo.interview_plan based on the vacancy fields and tasks.
+    """
+
+    template = load_prompt("create_chat_plan_prompt.txt")
+
+    tasks_str = "\n".join(f"- {t}" for t in vacancy_info.tasks) if vacancy_info.tasks else "(none)"
+    task_ideas_str = "\n".join(f"- {t}" for t in vacancy_info.task_ides) if vacancy_info.task_ides else "(none)"
+    existing_plan = vacancy_info.interview_plan or ""
+
+    return template.format(
+        profession=vacancy_info.profession,
+        position=vacancy_info.position,
+        requirements=vacancy_info.requirements,
+        questions=vacancy_info.questions,
+        tasks=tasks_str,
+        task_ideas=task_ideas_str,
+        interview_plan=existing_plan,
+    )
+
+
+def build_chat_welcome_user_prompt(
+    vacancy_info: VacancyInfo,
+    chat_history: list[Message],
+) -> str:
+    """
+    Build the user prompt for the first welcome message in create_chat().
+    """
+
+    template = load_prompt("chat_welcome_prompt.txt")
+
+    vacancy_str = str(vacancy_info)  # or format manually if you prefer
+    chat_history_str = _format_chat_history(chat_history)
+    interview_plan = vacancy_info.interview_plan or "(no plan generated yet)"
+
+    return template.format(
+        vacancy_info=vacancy_str,
+        interview_plan=interview_plan,
+        chat_history=chat_history_str,
+    )
+
+
+def build_chat_system_prompt() -> str:
+    """
+    Load the static system prompt for the chat initialization (create_chat).
+
+    This defines the global behavior of the AI Interviewer when
+    generating the welcome message and conducting the interview.
+    """
+    return load_prompt("chat_welcome_system_prompt.txt")
 
 if __name__ == "__main__":
     print(build_response_system_prompt())
