@@ -6,7 +6,7 @@ from openai import OpenAI
 
 from config import MODEL_NAME, TOKEN_LIMIT
 from src.adapters.ai_chat.ai_utils.misc import get_chat_completion_stream, remove_thinking_part
-from src.adapters.ai_chat.ai_utils.prompt_builders import build_chat_plan_prompt, build_chat_system_prompt, build_chat_welcome_user_prompt, build_response_prompts
+from src.adapters.ai_chat.ai_utils.prompt_builders import build_chat_plan_prompt, build_chat_system_prompt, build_chat_welcome_user_prompt, build_response_prompts, build_stream_task_prompt
 from src.adapters.ai_chat.ai_utils.streams import filter_thinking_chunks
 from src.domain.message.message import Message
 from src.domain.metrics.metrics import Metrics
@@ -96,9 +96,30 @@ class AIChat(AIChatBase):
         ...
         return Task(type=TaskType.THEORY, language=None, description="Напиши теорию для решения задачи")
     
-    async def stream_task(self, vacancy_info: VacancyInfo, chat_history: list[Message], description: str) -> AsyncGenerator[str, None]:
-        ...
-        return AsyncGenerator[str, None]([])
+    async def stream_task(
+        self,
+        vacancy_info: VacancyInfo,
+        chat_history: list[Message],
+    ) -> AsyncGenerator[str, None]:
+        """
+        Stream the next task description selected according to the interview_plan.
+        The output is just text, including [coding]/[theory] and optionally language.
+        """
+
+        prompt = build_stream_task_prompt(vacancy_info, chat_history)
+
+        messages = [
+            {"role": "user", "content": prompt},
+        ]
+
+        raw_stream = get_chat_completion_stream(
+            self.client,
+            MODEL_NAME,
+            messages,
+        )
+
+        # Reuse the same <think> filtering you already use elsewhere
+        return filter_thinking_chunks(raw_stream)
 
     async def create_metrics(self, vacancy_info: VacancyInfo, chat_history: list[Message]) -> Metrics:
         ...

@@ -128,6 +128,27 @@ def build_chat_system_prompt() -> str:
     """
     return load_prompt("chat_welcome_system_prompt.txt")
 
+def build_stream_task_prompt(
+    vacancy_info: VacancyInfo,
+    chat_history: list[Message],
+) -> str:
+    """
+    Build the prompt for streaming the next task description.
+    The model will select the next task from the interview_plan and
+    output a tagged description ([coding]/[theory], and language for coding).
+    """
+    template = load_prompt("stream_task_prompt.txt")
+
+    vacancy_str = str(vacancy_info)
+    plan = vacancy_info.interview_plan or ""
+    history_str = _format_chat_history(chat_history)
+
+    return template.format(
+        vacancy_info=vacancy_str,
+        interview_plan=plan,
+        chat_history=history_str,
+    )
+
 if __name__ == "__main__":
     print(build_response_system_prompt())
     response_user_prompt = build_response_user_prompt(
