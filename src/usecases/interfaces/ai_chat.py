@@ -1,9 +1,9 @@
 from abc import ABC, abstractmethod
 
-from domain.message.message import Message
-from domain.metrics.metrics import Metrics
-from domain.task.task import Task
-from domain.vacancy.vacancy import VacancyInfo
+from src.domain.message.message import Message
+from src.domain.metrics.metrics import Metrics
+from src.domain.task.task import Task
+from src.domain.vacancy.vacancy import VacancyInfo
 
 
 class AIChatBase(ABC):
