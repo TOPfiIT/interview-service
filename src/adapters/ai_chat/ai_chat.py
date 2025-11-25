@@ -4,7 +4,7 @@ from typing import Any, AsyncGenerator, Coroutine
 import dotenv
 from openai import OpenAI
 
-from config import MODEL_NAME, TOKEN_LIMIT
+from src.core.setting import settings
 from src.adapters.ai_chat.ai_utils.misc import get_chat_completion_stream, remove_thinking_part
 from src.adapters.ai_chat.ai_utils.prompt_builders import build_chat_plan_prompt, build_chat_system_prompt, build_chat_welcome_user_prompt, build_response_prompts, build_stream_task_prompt
 from src.adapters.ai_chat.ai_utils.streams import filter_thinking_chunks
@@ -23,7 +23,7 @@ class AIChat(AIChatBase):
     AI Chat implementation
     """
     def __init__(self):
-        self.client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"), base_url=os.getenv("OPENAI_BASE_URL"))
+        self.client = OpenAI(api_key=settings.openai_api_key, base_url=settings.openai_base_url)
 
     async def create_chat( 
         self,
@@ -33,7 +33,7 @@ class AIChat(AIChatBase):
         # 1) PLAN STEP (non-streaming)
         plan_prompt = build_chat_plan_prompt(vacancy_info)
         plan_completion = self.client.chat.completions.create(
-            model=MODEL_NAME,
+            model=settings.llm_model,
             messages=[{"role": "user", "content": plan_prompt}],
         )
         interview_plan = plan_completion.choices[0].message.content.strip()
@@ -60,7 +60,7 @@ class AIChat(AIChatBase):
 
         raw_stream = get_chat_completion_stream(
             self.client,
-            MODEL_NAME,
+            settings.llm_model,
             messages,
         )
         filtered_stream = filter_thinking_chunks(raw_stream)
@@ -85,7 +85,7 @@ class AIChat(AIChatBase):
 
         raw_stream = get_chat_completion_stream(
             self.client,
-            MODEL_NAME,
+            settings.llm_model,
             messages,
         )
 
@@ -114,7 +114,7 @@ class AIChat(AIChatBase):
 
         raw_stream = get_chat_completion_stream(
             self.client,
-            MODEL_NAME,
+            settings.llm_model,
             messages,
         )
 
@@ -126,22 +126,4 @@ class AIChat(AIChatBase):
         return Metrics()
 
 if __name__ == "__main__":
-    async def main():
-        ai_chat = AIChat()
-        result = await ai_chat.create_chat(
-            VacancyInfo(
-                profession="Программист",
-                position="Программист",
-                requirements="Программист",
-                questions="Программист",
-                tasks=["Программист"],
-                task_ides=["Программист"],
-                interview_plan=""
-            ),
-            []
-        )
-        # Use the result to avoid "must be used" warning
-        if result:
-            pass
-    
-    asyncio.run(main())
+    ...

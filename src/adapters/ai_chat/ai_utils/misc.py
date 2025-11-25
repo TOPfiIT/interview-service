@@ -1,10 +1,9 @@
 from typing import Generator, List, Dict, Any
-from config import TOKEN_LIMIT
+from src.core.setting import settings
 def get_chat_completion_stream(
     client: Any,
     model: str,
     messages: List[Dict[str, str]],
-    max_tokens: int = TOKEN_LIMIT,
 ) -> Generator[str, None, None]:
     """
     Yields content chunks from an OpenAI chat completion stream.
@@ -25,7 +24,6 @@ def get_chat_completion(
     client: Any,
     model: str,
     messages: List[Dict[str, str]],
-    max_tokens: int = TOKEN_LIMIT,
 ) -> str:
     """
     Get chat completion
@@ -33,7 +31,6 @@ def get_chat_completion(
     resp = client.chat.completions.create(
         model=model,
         messages=messages,
-        max_tokens=max_tokens,
     )
     
     return resp.choices[0].message.content

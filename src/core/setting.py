@@ -35,5 +35,33 @@ class Settings(BaseSettings):
         validation_alias="PUBLIC_KEY",
     )
 
+    llm_max_tokens: int = Field(
+        default=25_000,
+        description="LLM maximum tokens",
+        alias="LLM_MAX_TOKENS",
+        validation_alias="LLM_MAX_TOKENS",
+    )
+
+    llm_model: str = Field(
+        default="qwen3-32b-awq",
+        description="LLM model",
+        alias="LLM_MODEL_NAME",
+        validation_alias="LLM_MODEL_NAME",
+    )
+
+    openai_base_url: str = Field(
+        default="https://llm.t1v.scibox.tech/v1",
+        description="OpenAI base URL",
+        alias="OPENAI_BASE_URL",
+        validation_alias="OPENAI_BASE_URL",
+    )
+
+    openai_api_key: str = Field(
+        default="",
+        description="OpenAI API key",
+        alias="OPENAI_API_KEY",
+        validation_alias="OPENAI_API_KEY",
+    )
+
 
 settings = Settings()
