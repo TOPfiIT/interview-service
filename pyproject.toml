@@ -1,10 +1,14 @@
 [project]
 name = "interview-service"
 version = "0.1.0"
-description = "Add your description here"
+description = "Interview Service manage room interview sessions"
 readme = "README.md"
 requires-python = ">=3.13"
 dependencies = [
+    "cryptography>=46.0.3",
+    "fastapi[all]>=0.122.0",
+    "loguru>=0.7.3",
+    "python-jose[cryptography]>=3.5.0",
     "dotenv>=0.9.9",
     "openai>=2.8.1",
     "pip>=25.3",

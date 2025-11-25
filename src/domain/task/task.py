@@ -9,13 +9,21 @@ class TaskType(str, Enum):
 
 
 @dataclass
-class Task:
+class TaskMetadata:
     """
-    Task class
+    Task metadata class
     """
 
     type: TaskType
     language: str | None
+
+
+@dataclass
+class Task(TaskMetadata):
+    """
+    Task class
+    """
+
     description: str
 
     def to_message(self) -> Message:
