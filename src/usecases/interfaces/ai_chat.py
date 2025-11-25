@@ -59,10 +59,25 @@ class AIChatBase(ABC):
         self,
         VacancyInfo: VacancyInfo,
         chat_history: list[Message],
+        description: str
     ) -> Task:
         """
         Create AI task
         :param VacancyInfo: Vacancy information
+        :param chat_history: Chat history
+        :return: Task
+        """
+        pass
+
+    @abstractmethod
+    async def stream_task(
+        self,
+        vacancy_info: VacancyInfo,
+        chat_history: list[Message],
+    ) -> Generator[str, None]:
+        """
+        Stream task
+        :param vacancy_info: Vacancy information
         :param chat_history: Chat history
         :return: Task
         """

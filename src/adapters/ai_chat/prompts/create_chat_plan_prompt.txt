@@ -21,11 +21,16 @@ Your job:
    - You MUST NOT ignore these tasks or replace them with completely different ones.
 3. If both "Predefined tasks" and "Predefined task ideas" are empty, you MUST propose your own set of 2–5 tasks/questions
    that are consistent with the profession, position, requirements, and example topics.
-4. The plan should describe:
-   - The order of stages (e.g., intro, warm-up question, main coding task, follow-up, wrap-up).
+4. Tasks should follow several rules
+   - they can be tested with simple stdin stdout
+   - they should be either theoretical or programming questions with a clear separation add a tag [coding/theory]
+   theoetical questions are answered in chat, while programming questions are answered in IDE
+
+5. The plan should describe:
+   - The order of stages (e.g., warm-up question, theoretical questions and main coding task/tasks, follow-ups if needed, wrap-up).
    - Which tasks/questions are used at each stage.
    - Optional approximate timing or relative importance.
-5. The plan MUST explicitly contain a note that it is INTERNAL ONLY and MUST NOT be disclosed to the candidate.
+6. The plan MUST explicitly contain a note that it is INTERNAL ONLY and MUST NOT be disclosed to the candidate.
 
 Output format:
 

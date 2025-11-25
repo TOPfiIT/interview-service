@@ -92,11 +92,14 @@ class AIChat(AIChatBase):
         # IMPORTANT: we don't yield here; we return an async generator object
         return filter_thinking_chunks(raw_stream)
 
-    
     async def create_task(self, vacancy_info: VacancyInfo, chat_history: list[Message]) -> Task:
         ...
         return Task(type=TaskType.THEORY, language=None, description="Напиши теорию для решения задачи")
     
+    async def stream_task(self, vacancy_info: VacancyInfo, chat_history: list[Message], description: str) -> AsyncGenerator[str, None]:
+        ...
+        return AsyncGenerator[str, None]([])
+
     async def create_metrics(self, vacancy_info: VacancyInfo, chat_history: list[Message]) -> Metrics:
         ...
         return Metrics()
