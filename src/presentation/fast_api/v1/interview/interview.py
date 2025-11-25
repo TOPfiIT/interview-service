@@ -25,9 +25,9 @@ async def create_room(interviewee: CreatedRoomRequest) -> None:
     tags=["Interview"],
     summary="Get a room",
 )
-async def get_room() -> InterviewRoom:
+async def get_room() -> None:
     logger.info("Getting room")
-    pass
+    ...
 
 
 @router.post(
@@ -39,7 +39,7 @@ async def get_room() -> InterviewRoom:
 )
 async def create_solution(solution: str) -> None:
     logger.info("Sending solution for")
-    pass
+    ...
 
 
 @router.post(
@@ -51,7 +51,7 @@ async def create_solution(solution: str) -> None:
 )
 async def create_question(question: str) -> None:
     logger.info("Sending question")
-    pass
+    ...
 
 
 @router.delete(
@@ -60,5 +60,4 @@ async def create_question(question: str) -> None:
     tags=["Interview"],
     summary="Stop a room",
 )
-async def stop_room() -> None:
-    pass
+async def stop_room() -> None: ...
