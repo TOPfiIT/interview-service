@@ -4,7 +4,8 @@ from typing import Any, AsyncGenerator, Coroutine
 import dotenv
 from openai import OpenAI
 
-from src.adapters.ai_chat.ai_utils.misc import get_chat_completion_stream
+from config import MODEL_NAME, TOKEN_LIMIT
+from src.adapters.ai_chat.ai_utils.misc import get_chat_completion_stream, remove_thinking_part
 from src.adapters.ai_chat.ai_utils.prompt_builders import build_chat_plan_prompt, build_chat_system_prompt, build_chat_welcome_user_prompt, build_response_prompts
 from src.adapters.ai_chat.ai_utils.streams import filter_thinking_chunks
 from src.domain.message.message import Message
@@ -24,26 +25,33 @@ class AIChat(AIChatBase):
     def __init__(self):
         self.client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"), base_url=os.getenv("OPENAI_BASE_URL"))
 
-    async def create_chat(  #type: ignore
+    async def create_chat( 
         self,
         vacancy_info: VacancyInfo,
         chat_history: list[Message],
-    ) -> tuple[VacancyInfo, AsyncGenerator[str, None]]:  # type: ignore
+    ) -> tuple[VacancyInfo, AsyncGenerator[str, None]]:  
         # 1) PLAN STEP (non-streaming)
         plan_prompt = build_chat_plan_prompt(vacancy_info)
         plan_completion = self.client.chat.completions.create(
-            model="qwen3-32b-awq",
+            model=MODEL_NAME,
             messages=[{"role": "user", "content": plan_prompt}],
         )
         interview_plan = plan_completion.choices[0].message.content.strip()
+        interview_plan = remove_thinking_part(interview_plan)
 
-        updated_vacancy = VacancyInfo(
-            **{**vacancy_info.__dict__, "interview_plan": interview_plan}
-        )
+        updated_vacancy = vacancy_info
+        updated_vacancy.interview_plan = interview_plan
 
-        # 2) WELCOME STEP (streaming)
+        return updated_vacancy
+
+    async def generate_welcome_message(
+        self,
+        vacancy_info: VacancyInfo,
+        chat_history: list[Message],
+    ) -> AsyncGenerator[str, None]:
+        
         system_prompt = build_chat_system_prompt()
-        user_prompt = build_chat_welcome_user_prompt(updated_vacancy, chat_history)
+        user_prompt = build_chat_welcome_user_prompt(vacancy_info, chat_history)
 
         messages = [
             {"role": "system", "content": system_prompt},
@@ -52,21 +60,18 @@ class AIChat(AIChatBase):
 
         raw_stream = get_chat_completion_stream(
             self.client,
-            "qwen3-32b-awq",
+            MODEL_NAME,
             messages,
-            20000,
         )
         filtered_stream = filter_thinking_chunks(raw_stream)
+        return filtered_stream
 
-        return updated_vacancy, filtered_stream
-
-
-    async def create_response( #type: ignore
+    async def create_response(
         self,
         vacancy_info: VacancyInfo,
         chat_history: list[Message],
         task: Task,
-    ) -> AsyncGenerator[str, None]: # type: ignore
+    ) -> AsyncGenerator[str, None]: 
         system_prompt, user_prompt = build_response_prompts(
             vacancy_info=vacancy_info,
             chat_history=chat_history,
@@ -80,9 +85,8 @@ class AIChat(AIChatBase):
 
         raw_stream = get_chat_completion_stream(
             self.client,
-            "qwen3-32b-awq",
+            MODEL_NAME,
             messages,
-            20000,
         )
 
         # IMPORTANT: we don't yield here; we return an async generator object
