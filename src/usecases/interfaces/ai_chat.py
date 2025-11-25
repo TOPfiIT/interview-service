@@ -16,7 +16,7 @@ class AIChatBase(ABC):
         self,
         vacancy_info: VacancyInfo,
         chat_history: list[Message],
-    ) -> tuple[VacancyInfo, Generator[str]]:
+    ) -> VacancyInfo:
         """
         Create AI chat
 
@@ -26,6 +26,17 @@ class AIChatBase(ABC):
         """
         pass
 
+    @abstractmethod
+    async def generate_welcome_message(
+        self,
+        vacancy_info: VacancyInfo,
+        chat_history: list[Message],
+    ) -> Generator[str]:
+        """
+        Generate welcome message
+        """
+        pass
+    
     @abstractmethod
     async def create_response(
         self,
