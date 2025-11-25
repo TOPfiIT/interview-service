@@ -1,10 +1,10 @@
 from typing import Generator, List, Dict, Any
-
+from config import TOKEN_LIMIT
 def get_chat_completion_stream(
     client: Any,
     model: str,
     messages: List[Dict[str, str]],
-    max_tokens: int = 20000,
+    max_tokens: int = TOKEN_LIMIT,
 ) -> Generator[str, None, None]:
     """
     Yields content chunks from an OpenAI chat completion stream.
@@ -12,7 +12,6 @@ def get_chat_completion_stream(
     with client.chat.completions.stream(
         model=model,
         messages=messages,
-        max_tokens=max_tokens,
     ) as stream:
         for event in stream:
             if event.type == "chunk":
@@ -26,7 +25,7 @@ def get_chat_completion(
     client: Any,
     model: str,
     messages: List[Dict[str, str]],
-    max_tokens: int = 20000,
+    max_tokens: int = TOKEN_LIMIT,
 ) -> str:
     """
     Get chat completion
@@ -39,3 +38,10 @@ def get_chat_completion(
     
     return resp.choices[0].message.content
 
+def remove_thinking_part(message: str) -> str:
+    """
+    Remove the thinking part from the message
+    """
+    if "<think>" not in message:
+        return message
+    return message.split("</think>")[1].strip()
