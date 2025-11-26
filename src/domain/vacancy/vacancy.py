@@ -15,5 +15,5 @@ class VacancyInfo:
     tasks: list[str]
     task_ides: list[str]
     interview_plan: str
-    duration: timedelta
+    duration: timedelta #TODO: Add duration to prompts
 

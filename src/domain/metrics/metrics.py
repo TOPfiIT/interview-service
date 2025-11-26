@@ -44,8 +44,8 @@ class MetricsBlock2:
     Metrics class
     """
     summary: str
-    clarity_score: int # 1-5
-    completeness_score: int # 1-5
+    clarity_score: int # 0-5
+    completeness_score: int # 0-5
     feedback_response: str
     tech_fit_level: TechFitLevel
     tech_fit_comment: str
