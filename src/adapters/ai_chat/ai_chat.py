@@ -8,7 +8,7 @@ from src.adapters.ai_chat.ai_utils.map_enum import map_user_type, map_assistant_
 from src.core.setting import settings
 from src.adapters.ai_chat.ai_utils.misc import get_chat_completion_stream, remove_thinking_part
 from src.adapters.ai_chat.ai_utils.prompt_builders import build_chat_plan_prompt, build_chat_system_prompt, build_chat_welcome_user_prompt, build_response_prompts, build_create_task_system_prompt, build_create_task_user_prompt
-from src.adapters.ai_chat.ai_utils.streams import strip_think_and_ctrl
+from src.adapters.ai_chat.ai_utils.streams import strip_think_and_ctrl, filter_thinking_chunks
 from src.domain.message.message import Message
 from src.domain.metrics.metrics import Metrics
 from src.domain.task.task import Task
@@ -59,9 +59,15 @@ class AIChat(AIChatBase):
             {"role": "user", "content": user_prompt},
         ]
 
+        raw_stream = get_chat_completion_stream(
+            self.client,
+            settings.llm_model,
+            messages,
+        )
         
-        
-        return 
+        stream = filter_thinking_chunks(raw_stream)
+
+        return stream
 
     async def create_response(
         self,
