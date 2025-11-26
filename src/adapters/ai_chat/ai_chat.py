@@ -7,14 +7,15 @@ from openai import OpenAI
 from src.adapters.ai_chat.ai_utils.map_enum import map_user_type, map_assistant_type, map_task_language, map_task_type
 from src.core.setting import settings
 from src.adapters.ai_chat.ai_utils.misc import get_chat_completion_stream, remove_thinking_part
-from src.adapters.ai_chat.ai_utils.prompt_builders import build_chat_plan_prompt, build_chat_system_prompt, build_chat_welcome_user_prompt, build_response_prompts, build_create_task_system_prompt, build_create_task_user_prompt
+from src.adapters.ai_chat.ai_utils.prompt_builders import build_chat_plan_prompt, build_chat_system_prompt, build_chat_welcome_user_prompt, build_response_prompts, build_create_task_system_prompt, build_create_task_user_prompt, build_metrics_block2_system_prompt, build_metrics_block2_user_prompt, build_metrics_block3_system_prompt, build_metrics_block3_user_prompt
 from src.adapters.ai_chat.ai_utils.streams import strip_think_and_ctrl, filter_thinking_chunks
 from src.domain.message.message import Message
-from src.domain.metrics.metrics import Metrics
+from src.domain.metrics.metrics import MetricsBlock1, MetricsBlock2, MetricsBlock3
 from src.domain.task.task import Task
 from src.domain.vacancy.vacancy import VacancyInfo
 from src.usecases.interfaces.ai_chat import AIChatBase
 from src.domain.message.message import RoleEnum
+from src.adapters.ai_chat.ai_utils.metric_parsers import parse_metrics_block2, parse_metrics_block3
 
 dotenv.load_dotenv()
 
@@ -154,9 +155,53 @@ class AIChat(AIChatBase):
 
         return body_stream, task
 
-    async def create_metrics(self, vacancy_info: VacancyInfo, chat_history: list[Message]) -> Metrics:
-        ...
-        return Metrics()
+    async def create_metrics(
+        self, vacancy_info: VacancyInfo, 
+        chat_history: list[Message], 
+        metrics_block1: MetricsBlock1,
+    ) -> tuple[MetricsBlock1, MetricsBlock2, MetricsBlock3]:
+        
+        # -------- Block 2: summary + local scores + tech fit --------
+        system_prompt_b2 = build_metrics_block2_system_prompt()
+        user_prompt_b2 = build_metrics_block2_user_prompt(
+            vacancy_info=vacancy_info,
+            chat_history=chat_history,
+            metrics_block1=metrics_block1,
+        )
 
-if __name__ == "__main__":
-    ...
+        messages_b2 = [
+            {"role": "system", "content": system_prompt_b2},
+            {"role": "user", "content": user_prompt_b2},
+        ]
+
+        completion_b2 = self.client.chat.completions.create(
+            model=settings.llm_model,
+            messages=messages_b2,
+        )
+
+        raw_json_b2 = completion_b2.choices[0].message.content
+        metrics_block2 = parse_metrics_block2(raw_json_b2)
+
+        # -------- Block 3: final verdict --------
+        system_prompt_b3 = build_metrics_block3_system_prompt()
+        user_prompt_b3 = build_metrics_block3_user_prompt(
+            vacancy_info=vacancy_info,
+            chat_history=chat_history,
+            metrics_block1=metrics_block1,
+            metrics_block2=metrics_block2,
+        )
+
+        messages_b3 = [
+            {"role": "system", "content": system_prompt_b3},
+            {"role": "user", "content": user_prompt_b3},
+        ]
+
+        completion_b3 = self.client.chat.completions.create(
+            model=settings.llm_model,
+            messages=messages_b3,
+        )
+
+        raw_json_b3 = completion_b3.choices[0].message.content
+        metrics_block3 = parse_metrics_block3(raw_json_b3)
+
+        return metrics_block1, metrics_block2, metrics_block3

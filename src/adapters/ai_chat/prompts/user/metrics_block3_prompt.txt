@@ -1,0 +1,49 @@
+You are given final data from a technical interview.
+
+Vacancy info:
+{vacancy_info}
+
+Numeric platform metrics (MetricsBlock1):
+{metrics_block1}
+
+Intermediate evaluation metrics (MetricsBlock2):
+{metrics_block2}
+
+Full chat history between interviewer and candidate (oldest → newest):
+{chat_history}
+
+Use ALL of this information to produce a final high-level assessment of the candidate for this specific vacancy.
+
+Your task:
+- Describe the candidate’s main strengths.
+- Describe the main weaknesses or gaps.
+- Summarize whether there are signs of cheating or suspicious behavior.
+- Make a rough seniority guess.
+- Give a final hiring recommendation.
+
+Follow these rules:
+- Use Russian for all text fields, unless the majority of the chat is in English. If the chat is mostly in English, write all text fields in English.
+- Do NOT describe internal metrics or system details in the text.
+- For cheating, use only:
+  - the numeric field "copy_paste_suspicion" from MetricsBlock1, and
+  - clear evidence from the chat (e.g. explicit mentions of copying, external tools).
+  If evidence is weak or unclear, say that directly and avoid strong accusations.
+
+Field constraints:
+- "seniority_guess" must be exactly one of:
+  - "junior"
+  - "middle"
+  - "senior"
+
+- "recommendation" must be exactly one of:
+  - "reject"
+  - "doubt"
+  - "hire"
+  - "strong_hire"
+
+Return ONLY a single JSON object with exactly these fields and no others:
+- "strengths"
+- "weaknesses"
+- "cheating_summary"
+- "seniority_guess"
+- "recommendation"
