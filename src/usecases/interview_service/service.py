@@ -1,4 +1,3 @@
-from types import CoroutineType
 from src.domain.message.message import Message, TypeEnum
 from src.domain.room.room import Room, Solution, SolutionType, Interviewee
 from src.domain.task.task import Task, TaskMetadata
