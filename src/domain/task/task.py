@@ -7,6 +7,19 @@ class TaskType(str, Enum):
     CODE = "code"
     THEORY = "theory"
 
+class TaskLanguage(str, Enum):
+    """
+    Task language enum
+    """
+    PYTHON = "python"
+    JAVASCRIPT = "javascript"
+    JAVA = "java"
+    C = "c"
+    CPP = "cpp"
+    CSHARP = "csharp"
+    PHP = "php"
+    RUBY = "ruby"
+    GO = "go"
 
 @dataclass
 class TaskMetadata:
@@ -15,7 +28,7 @@ class TaskMetadata:
     """
 
     type: TaskType
-    language: str | None
+    language: TaskLanguage | None
 
 
 @dataclass
