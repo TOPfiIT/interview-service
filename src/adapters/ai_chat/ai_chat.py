@@ -4,17 +4,18 @@ from typing import Any, AsyncGenerator, Coroutine
 import dotenv
 from openai import OpenAI
 
+from src.adapters.ai_chat.ai_utils.map_enum import map_user_type, map_assistant_type
 from src.core.setting import settings
 from src.adapters.ai_chat.ai_utils.misc import get_chat_completion_stream, remove_thinking_part
 from src.adapters.ai_chat.ai_utils.prompt_builders import build_chat_plan_prompt, build_chat_system_prompt, build_chat_welcome_user_prompt, build_response_prompts
 from src.adapters.ai_chat.ai_utils.prompt_builders import build_stream_task_prompt, build_stream_task_system_prompt
-from src.adapters.ai_chat.ai_utils.streams import filter_thinking_chunks
+from src.adapters.ai_chat.ai_utils.streams import strip_think_and_ctrl
 from src.domain.message.message import Message
 from src.domain.metrics.metrics import Metrics
 from src.domain.task.task import Task, TaskType
 from src.domain.vacancy.vacancy import VacancyInfo
 from src.usecases.interfaces.ai_chat import AIChatBase
-
+from src.domain.message.message import RoleEnum
 
 dotenv.load_dotenv()
 
@@ -64,15 +65,15 @@ class AIChat(AIChatBase):
             settings.llm_model,
             messages,
         )
-        filtered_stream = filter_thinking_chunks(raw_stream)
-        return filtered_stream
+        
+        return 
 
     async def create_response(
         self,
         vacancy_info: VacancyInfo,
         chat_history: list[Message],
         task: Task,
-    ) -> AsyncGenerator[str, None]: 
+    ) -> tuple[AsyncGenerator[str, None], Message, Message]:
         system_prompt, user_prompt = build_response_prompts(
             vacancy_info=vacancy_info,
             chat_history=chat_history,
@@ -90,8 +91,24 @@ class AIChat(AIChatBase):
             messages,
         )
 
-        # IMPORTANT: we don't yield here; we return an async generator object
-        return filter_thinking_chunks(raw_stream)
+        control, body_stream = strip_think_and_ctrl(raw_stream)
+
+        user_type = map_user_type(control.get("user_type"))
+        assistant_type = map_assistant_type(control.get("assistant_type"))
+
+        user_message = Message(
+            role=RoleEnum.USER,
+            type=user_type,
+            content="",  # filled elsewhere with actual user text
+        )
+
+        ai_message = Message(
+            role=RoleEnum.AI,
+            type=assistant_type,
+            content="",  # will be filled from streamed body
+        )
+
+        return body_stream, user_message, ai_message
 
     async def create_task(self,description:str, vacancy_info: VacancyInfo, chat_history: list[Message]) -> Task:
         ...
@@ -121,7 +138,7 @@ class AIChat(AIChatBase):
         )
 
         # Reuse the same <think> filtering you already use elsewhere
-        return filter_thinking_chunks(raw_stream)
+        return 
 
     async def create_metrics(self, vacancy_info: VacancyInfo, chat_history: list[Message]) -> Metrics:
         ...

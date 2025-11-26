@@ -5,6 +5,10 @@ from enum import Enum
 class TypeEnum(str, Enum):
     QUESTION = "question"
     ANSWER = "answer"
+    HINT = "hint"
+    CHECK_SOLUTION = "check_solution"
+    RESPONSE = "response"
+    OTHER = "other"
     TASK = "task"
     SOLUTION = "solution"
 
