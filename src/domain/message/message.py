@@ -5,6 +5,10 @@ from enum import Enum
 class TypeEnum(str, Enum):
     QUESTION = "question"
     ANSWER = "answer"
+    HINT = "hint"
+    CHECK_SOLUTION = "check_solution"
+    RESPONSE = "response"
+    OTHER = "other"
     TASK = "task"
     SOLUTION = "solution"
 
@@ -35,3 +39,10 @@ class Message:
     role: RoleEnum
     type: TypeEnum
     content: str
+
+    def to_string(self) -> str:
+        """
+        Convert message to string
+        """
+
+        return f"{self.role.value} [{self.type.value}]: {self.content}"

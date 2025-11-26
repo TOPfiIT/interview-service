@@ -1,32 +1,39 @@
-from abc import ABC, abstractmethod
+from typing import AsyncGenerator, Protocol
+from src.domain.message.message import Message
+from src.domain.metrics.metrics import Metrics
+from src.domain.task.task import Task
+from src.domain.vacancy.vacancy import VacancyInfo
 
-from domain.message.message import Message
-from domain.metrics.metrics import Metrics
-from domain.task.task import Task
-from domain.vacancy.vacancy import VacancyInfo
 
-
-class AIChatBase(ABC):
+class AIChatBase(Protocol):
     """
     Abstract class for AI Chat
     """
 
-    @abstractmethod
     async def create_chat(
         self,
         vacancy_info: VacancyInfo,
         chat_history: list[Message],
-    ) -> tuple[str, Task]:
+    ) -> VacancyInfo:
         """
         Create AI chat
 
         :param vacancy_info: Vacancy information
         :param chat_history: Chat history
-        :return: Welcome message and task
+        :return: Updated vacancy information and generator of response chunks
         """
-        pass
+        ...
 
-    @abstractmethod
+    async def generate_welcome_message(
+        self,
+        vacancy_info: VacancyInfo,
+        chat_history: list[Message],
+    ) -> AsyncGenerator[str, None]:
+        """
+        Generate welcome message
+        """
+        ...
+
     async def create_response(
         self,
         VacancyInfo: VacancyInfo,
@@ -41,13 +48,13 @@ class AIChatBase(ABC):
         :param task: Task
         :return: AI response
         """
-        pass
+        ...
 
-    @abstractmethod
     async def create_task(
         self,
         VacancyInfo: VacancyInfo,
         chat_history: list[Message],
+        description: str
     ) -> Task:
         """
         Create AI task
@@ -55,9 +62,21 @@ class AIChatBase(ABC):
         :param chat_history: Chat history
         :return: Task
         """
-        pass
+        ...
 
-    @abstractmethod
+    async def stream_task(
+        self,
+        vacancy_info: VacancyInfo,
+        chat_history: list[Message],
+    ) -> AsyncGenerator[str, None]:
+        """
+        Stream task
+        :param vacancy_info: Vacancy information
+        :param chat_history: Chat history
+        :return: Task
+        """
+        ...
+
     async def create_metrics(
         self,
         VacancyInfo: VacancyInfo,
@@ -69,4 +88,4 @@ class AIChatBase(ABC):
         :param ChatHistory: Chat history
         :return: Metrics
         """
-        pass
+        ...

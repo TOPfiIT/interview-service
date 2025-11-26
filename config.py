@@ -1,0 +1,2 @@
+MODEL_NAME = "qwen3-32b-awq"
+TOKEN_LIMIT = 25_000
