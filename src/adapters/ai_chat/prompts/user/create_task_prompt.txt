@@ -1,0 +1,48 @@
+You are selecting the next interview task for a candidate.
+
+Vacancy info:
+{vacancy_info}
+
+Internal interview plan (for you only, do not reveal it):
+{interview_plan}
+
+Chat history between interviewer and candidate (oldest → newest):
+{chat_history}
+
+Supported coding languages for tasks:
+{supported_languages}
+
+Use the plan and chat history to decide which task should be given now:
+- Follow the order and intent of the plan.
+- Skip tasks that have already been asked or clearly solved.
+- Do not invent unrelated tasks.
+
+Then:
+
+1) Decide the task type and language:
+   - If it is a coding task:
+     - task_type = "code"
+     - task_language is one of the supported coding languages above (lowercase).
+   - If it is a theoretical question:
+     - task_type = "theory"
+     - task_language = "none".
+
+2) Output the control header:
+   - First output:
+     <ctrl>{{"task_type":"...","task_language":"..."}}</ctrl>
+   - Fill the two fields according to your choice.
+   - Do not add any other fields.
+
+3) Immediately after </ctrl>, output the task description that will be shown to the candidate:
+   - For coding tasks: clearly state what input is given and what output is required so the solution can be tested via stdin/stdout.
+   - For theoretical tasks: ask a clear question or give a short prompt that requires an explanation.
+
+Do not:
+- Mention the internal plan.
+- Explain how you chose the task.
+- Output any JSON in the visible task text.
+- Greet the candidate or start a conversation.
+
+Your final output must consist of:
+1) The <ctrl>{{"task_type":"...","task_language":"..."}}</ctrl> header.
+2) The task description text.

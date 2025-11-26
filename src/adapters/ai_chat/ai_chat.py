@@ -4,15 +4,14 @@ from typing import Any, AsyncGenerator, Coroutine
 import dotenv
 from openai import OpenAI
 
-from src.adapters.ai_chat.ai_utils.map_enum import map_user_type, map_assistant_type
+from src.adapters.ai_chat.ai_utils.map_enum import map_user_type, map_assistant_type, map_task_language, map_task_type
 from src.core.setting import settings
 from src.adapters.ai_chat.ai_utils.misc import get_chat_completion_stream, remove_thinking_part
-from src.adapters.ai_chat.ai_utils.prompt_builders import build_chat_plan_prompt, build_chat_system_prompt, build_chat_welcome_user_prompt, build_response_prompts
-from src.adapters.ai_chat.ai_utils.prompt_builders import build_stream_task_prompt, build_stream_task_system_prompt
+from src.adapters.ai_chat.ai_utils.prompt_builders import build_chat_plan_prompt, build_chat_system_prompt, build_chat_welcome_user_prompt, build_response_prompts, build_create_task_system_prompt, build_create_task_user_prompt
 from src.adapters.ai_chat.ai_utils.streams import strip_think_and_ctrl
 from src.domain.message.message import Message
 from src.domain.metrics.metrics import Metrics
-from src.domain.task.task import Task, TaskType
+from src.domain.task.task import Task
 from src.domain.vacancy.vacancy import VacancyInfo
 from src.usecases.interfaces.ai_chat import AIChatBase
 from src.domain.message.message import RoleEnum
@@ -91,7 +90,8 @@ class AIChat(AIChatBase):
             messages,
         )
 
-        control, body_stream = strip_think_and_ctrl(raw_stream)
+        #TODO: Add error handling and retry handling for strip_think_and_ctrl
+        control, body_stream = strip_think_and_ctrl(raw_stream) 
 
         user_type = map_user_type(control.get("user_type"))
         assistant_type = map_assistant_type(control.get("assistant_type"))
@@ -110,25 +110,26 @@ class AIChat(AIChatBase):
 
         return body_stream, user_message, ai_message
 
-    async def create_task(self,description:str, vacancy_info: VacancyInfo, chat_history: list[Message]) -> Task:
-        ...
-        return Task(type=TaskType.THEORY, language=None, description="Напиши теорию для решения задачи")
-    
-    async def stream_task(
+    async def create_task(
         self,
         vacancy_info: VacancyInfo,
         chat_history: list[Message],
-    ) -> AsyncGenerator[str, None]:
+    ) -> tuple[AsyncGenerator[str, None], Task]:
         """
-        Stream the next task description selected according to the interview_plan.
-        The output is just text, including [coding]/[theory] and optionally language.
+        Generate the next task according to the interview_plan.
+
+        Returns:
+          - stream: async generator of visible task text (after <ctrl> and <think> are stripped)
+          - task: Task object with type + language from ctrl header, description left empty
+                  (caller may accumulate stream into task.description if needed)
         """
 
-        prompt = build_stream_task_prompt(vacancy_info, chat_history)
-        system_prompt = build_stream_task_system_prompt()
+        system_prompt = build_create_task_system_prompt()
+        user_prompt = build_create_task_user_prompt(vacancy_info, chat_history)
+
         messages = [
             {"role": "system", "content": system_prompt},
-            {"role": "user", "content": prompt},
+            {"role": "user", "content": user_prompt},
         ]
 
         raw_stream = get_chat_completion_stream(
@@ -137,8 +138,19 @@ class AIChat(AIChatBase):
             messages,
         )
 
-        # Reuse the same <think> filtering you already use elsewhere
-        return 
+        #TODO: Add error handling and retry handling for strip_think_and_ctrl
+        control, body_stream = strip_think_and_ctrl(raw_stream)
+
+        task_type = map_task_type(control.get("task_type"))
+        task_language = map_task_language(control.get("task_language"))
+
+        task = Task(
+            type=task_type,
+            language=task_language,
+            description="",  # caller can fill from streamed text
+        )
+
+        return body_stream, task
 
     async def create_metrics(self, vacancy_info: VacancyInfo, chat_history: list[Message]) -> Metrics:
         ...

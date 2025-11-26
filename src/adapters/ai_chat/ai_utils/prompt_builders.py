@@ -1,5 +1,5 @@
 from src.domain.message.message import Message, RoleEnum, TypeEnum
-from src.domain.task.task import Task, TaskType
+from src.domain.task.task import Task, TaskType, TaskLanguage
 from src.domain.vacancy.vacancy import VacancyInfo
 from src.adapters.ai_chat.ai_utils.prompt_utils import load_prompt
 
@@ -96,26 +96,29 @@ def build_chat_system_prompt() -> str:
 
 # ---------- STREAM TASK ----------
 
-def build_stream_task_prompt(
+def build_create_task_system_prompt() -> str:
+    return load_prompt("system/create_task_system_prompt.txt")
+
+
+def build_create_task_user_prompt(
     vacancy_info: VacancyInfo,
     chat_history: list[Message],
 ) -> str:
-    template = load_prompt("user/stream_task_prompt.txt")
+    template = load_prompt("user/create_task_prompt.txt")
 
     vacancy_str = str(vacancy_info)
     plan = vacancy_info.interview_plan or ""
     history_str = _format_chat_history(chat_history)
 
+    # adaptive language list from enum
+    supported_languages = ", ".join(lang.value for lang in TaskLanguage) if TaskLanguage else "(none)"
+
     return template.format(
         vacancy_info=vacancy_str,
         interview_plan=plan,
         chat_history=history_str,
+        supported_languages=supported_languages,
     )
-
-
-def build_stream_task_system_prompt() -> str:
-    return load_prompt("system/stream_task_system_prompt.txt")
-
 
 if __name__ == "__main__":
     print(build_response_system_prompt())
