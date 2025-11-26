@@ -137,7 +137,7 @@ def build_stream_task_prompt(
     The model will select the next task from the interview_plan and
     output a tagged description ([coding]/[theory], and language for coding).
     """
-    template = load_prompt("create_task_prompt.txt")
+    template = load_prompt("stream_task_prompt.txt")
 
     vacancy_str = str(vacancy_info)
     plan = vacancy_info.interview_plan or ""
@@ -148,6 +148,13 @@ def build_stream_task_prompt(
         interview_plan=plan,
         chat_history=history_str,
     )
+
+def build_stream_task_system_prompt() -> str:
+    """
+    Build the system prompt for streaming the next task description.
+    """
+    return load_prompt("stream_task_system_prompt.txt")
+
 
 if __name__ == "__main__":
     print(build_response_system_prompt())

@@ -6,7 +6,8 @@ from openai import OpenAI
 
 from src.core.setting import settings
 from src.adapters.ai_chat.ai_utils.misc import get_chat_completion_stream, remove_thinking_part
-from src.adapters.ai_chat.ai_utils.prompt_builders import build_chat_plan_prompt, build_chat_system_prompt, build_chat_welcome_user_prompt, build_response_prompts, build_stream_task_prompt
+from src.adapters.ai_chat.ai_utils.prompt_builders import build_chat_plan_prompt, build_chat_system_prompt, build_chat_welcome_user_prompt, build_response_prompts
+from src.adapters.ai_chat.ai_utils.prompt_builders import build_stream_task_prompt, build_stream_task_system_prompt
 from src.adapters.ai_chat.ai_utils.streams import filter_thinking_chunks
 from src.domain.message.message import Message
 from src.domain.metrics.metrics import Metrics
@@ -92,7 +93,7 @@ class AIChat(AIChatBase):
         # IMPORTANT: we don't yield here; we return an async generator object
         return filter_thinking_chunks(raw_stream)
 
-    async def create_task(self, vacancy_info: VacancyInfo, chat_history: list[Message]) -> Task:
+    async def create_task(self,description:str, vacancy_info: VacancyInfo, chat_history: list[Message]) -> Task:
         ...
         return Task(type=TaskType.THEORY, language=None, description="Напиши теорию для решения задачи")
     
@@ -107,8 +108,9 @@ class AIChat(AIChatBase):
         """
 
         prompt = build_stream_task_prompt(vacancy_info, chat_history)
-
+        system_prompt = build_stream_task_system_prompt()
         messages = [
+            {"role": "system", "content": system_prompt},
             {"role": "user", "content": prompt},
         ]
 
