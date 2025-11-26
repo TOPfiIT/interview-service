@@ -70,7 +70,12 @@ class JWTManager:
         logger.debug(f"Request: {request.url}")
         logger.debug(f"Method: {request.method}")
 
-        if "/api/v1/room" in request.url.path and request.method == "POST":
+        if (
+            "/api/v1/room" in request.url.path
+            and request.method == "POST"
+            or "docs" in request.url.path
+            or "openapi.json" in request.url.path
+        ):
             logger.debug("Room creation request")
             return await call_next(request)
 

@@ -1,8 +1,8 @@
 from dataclasses import dataclass
-from domain.vacancy.vacancy import VacancyInfo
+from src.domain.vacancy.vacancy import VacancyInfo
 from uuid import UUID
-from domain.task.task import Task
-from domain.message.message import Message
+from src.domain.task.task import Task
+from src.domain.message.message import Message
 
 from enum import Enum
 

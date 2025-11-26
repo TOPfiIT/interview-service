@@ -9,6 +9,7 @@ class VacancyRoom(BaseModel):
 class Task(BaseModel):
     type: str
     condition: str
+    language: str
 
 
 class Message(BaseModel):

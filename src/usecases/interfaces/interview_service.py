@@ -1,7 +1,7 @@
 from typing import Any, Protocol
-from domain.vacancy.vacancy import VacancyInfo
-from domain.room.room import Room, Solution, Interviewee
-from domain.task.task import Task, TaskMetadata
+from src.domain.vacancy.vacancy import VacancyInfo
+from src.domain.room.room import Room, Solution, Interviewee
+from src.domain.task.task import Task, TaskMetadata
 from uuid import UUID
 from typing import AsyncGenerator
 
