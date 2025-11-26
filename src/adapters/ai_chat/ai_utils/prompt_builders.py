@@ -1,3 +1,4 @@
+from datetime import timedelta
 from src.domain.message.message import Message, RoleEnum, TypeEnum
 from src.domain.metrics.metrics import MetricsBlock1, MetricsBlock2
 from src.domain.task.task import Task, TaskType, TaskLanguage
@@ -63,12 +64,29 @@ def build_response_prompts(
 
 # ---------- CHAT PLAN ----------
 
+def build_chat_plan_system_prompt() -> str:
+    """
+    Load the static system prompt for interview plan generation.
+    """
+    return load_prompt("system/create_chat_plan_system_prompt.txt")
+
+
 def build_chat_plan_prompt(vacancy_info: VacancyInfo) -> str:
+    """
+    Build the user prompt that asks the LLM to generate or update
+    VacancyInfo.interview_plan based on the vacancy fields, tasks, and duration.
+    """
     template = load_prompt("user/create_chat_plan_prompt.txt")
 
     tasks_str = "\n".join(f"- {t}" for t in vacancy_info.tasks) if vacancy_info.tasks else "(none)"
     task_ideas_str = "\n".join(f"- {t}" for t in vacancy_info.task_ides) if vacancy_info.task_ides else "(none)"
     existing_plan = vacancy_info.interview_plan or ""
+
+    # Convert duration to minutes (int). Fall back to 30 if duration is somehow not set.
+    if isinstance(vacancy_info.duration, timedelta):
+        duration_minutes = max(1, int(vacancy_info.duration.total_seconds() // 60) or 1)
+    else:
+        duration_minutes = 90
 
     return template.format(
         profession=vacancy_info.profession,
@@ -78,7 +96,9 @@ def build_chat_plan_prompt(vacancy_info: VacancyInfo) -> str:
         tasks=tasks_str,
         task_ideas=task_ideas_str,
         interview_plan=existing_plan,
+        duration_minutes=duration_minutes,
     )
+
 
 
 # ---------- CHAT WELCOME ----------
