@@ -10,54 +10,94 @@ def strip_think_and_ctrl(
     """
     Given a stream of chunks that looks like:
 
-        (anything: may include <think>...</think>, newlines, spaces, etc)
+        <think> ... may contain "<ctrl>" etc ... </think>
         <ctrl>{...}</ctrl>VISIBLE_TEXT...
 
-    - Ignore everything before the first <ctrl>.
-    - Extract JSON between <ctrl> and </ctrl>, parse it into a dict.
-    - Return (control_dict, body_stream), where body_stream yields the rest
-      of the stream (only visible text) as an async generator.
+    1) Skip everything inside <think>...</think> (if present).
+       Any "<ctrl>" / "</ctrl>" inside <think> is ignored.
+    2) After </think> (or from the start, if there was no <think>),
+       find the first <ctrl>{...}</ctrl>, parse JSON inside.
+    3) Return (control_dict, body_stream), where body_stream yields
+       the rest of the stream (only visible text) as an async generator.
 
-    If <ctrl> or </ctrl> is not found, raise RuntimeError.
+    If <ctrl> or </ctrl> is not found at all, raises RuntimeError.
     """
 
     it = iter(raw_stream)
-    buffer = ""
 
-    # 1) Read until we find "<ctrl>"
-    start_idx = -1
+    # -------- PHASE 1: skip <think>...</think> block if present --------
+    buffer = ""
+    after_think = ""
+    in_think = False
+    think_closed = False
+
     for chunk in it:
         buffer += chunk
-        start_idx = buffer.find("<ctrl>")
-        if start_idx != -1:
+
+        # If we haven't yet seen a <think>, check for it
+        if not in_think:
+            start_think = buffer.find("<think>")
+            if start_think != -1:
+                in_think = True
+
+        if in_think and not think_closed:
+            # Look for </think>
+            end_think = buffer.find("</think>")
+            if end_think != -1:
+                think_closed = True
+                # Everything after </think> is the "real" start for ctrl search
+                after_think = buffer[end_think + len("</think>") :]
+                break
+    else:
+        # Stream ended during phase 1. Either:
+        # - No <think> at all: then buffer is just the whole stream.
+        # - <think> without </think>: we just treat all as normal text.
+        after_think = buffer
+
+    # If there was no <think> block at all, we might not have broken the loop.
+    # In that case, after_think is empty and buffer holds the full text.
+    if not think_closed and not after_think:
+        after_think = buffer
+
+    # -------- PHASE 2: find <ctrl>...</ctrl> AFTER the think block --------
+    ctrl_buffer = after_think
+
+    # Find <ctrl>
+    start_idx = ctrl_buffer.find("<ctrl>")
+    while start_idx == -1:
+        try:
+            chunk = next(it)
+        except StopIteration:
             break
+        ctrl_buffer += chunk
+        start_idx = ctrl_buffer.find("<ctrl>")
 
     if start_idx == -1:
         raise RuntimeError("No <ctrl> start tag found in model stream")
 
-    # Drop everything before "<ctrl>"
-    buffer = buffer[start_idx + len("<ctrl>") :]
+    # Drop everything before <ctrl>
+    ctrl_buffer = ctrl_buffer[start_idx + len("<ctrl>") :]
 
-    # 2) Read until we find "</ctrl>"
-    end_idx = buffer.find("</ctrl>")
+    # Find </ctrl>
+    end_idx = ctrl_buffer.find("</ctrl>")
     while end_idx == -1:
         try:
             chunk = next(it)
         except StopIteration:
             break
-        buffer += chunk
-        end_idx = buffer.find("</ctrl>")
+        ctrl_buffer += chunk
+        end_idx = ctrl_buffer.find("</ctrl>")
 
     if end_idx == -1:
         raise RuntimeError("No </ctrl> end tag found in model stream")
 
-    # 3) Split into control JSON and first body chunk
-    ctrl_content = buffer[:end_idx]
-    first_body_chunk = buffer[end_idx + len("</ctrl>") :]
+    # Split into control JSON and first visible body chunk
+    ctrl_content = ctrl_buffer[:end_idx]
+    first_body_chunk = ctrl_buffer[end_idx + len("</ctrl>") :]
 
     control: dict[str, Any] = parse_control_json(ctrl_content)
 
-    # 4) Async generator for the remaining body
+    # -------- PHASE 3: async body stream --------
     async def body_stream() -> AsyncGenerator[str, None]:
         if first_body_chunk:
             yield first_body_chunk
