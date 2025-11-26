@@ -36,3 +36,12 @@ class SendSolutionRequest(BaseModel):
     copy_paste_count: int
     language: str
     solution_type: str
+
+
+class TaskMetadata(BaseModel):
+    type: str
+    language: str
+
+
+class QuestionSendRequest(BaseModel):
+    question: str

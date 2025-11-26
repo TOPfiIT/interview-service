@@ -101,6 +101,8 @@ class InterviewService(InterviewServiceBase):
         Sends the solution to the room with the given id
         """
 
+        logger.info(f"Sending solution {solution.content}")
+
         room = InterviewService._room_sessions[room_id]
         room.solutions.append(solution)
         room.chat_history.append(
@@ -114,6 +116,8 @@ class InterviewService(InterviewServiceBase):
         Gets the solution response for the room with the given id
         """
 
+        logger.info(f"Getting solution response for room {room_id}")
+
         room = InterviewService._room_sessions[room_id]
         stream, user_message, ai_message = await self.ai_chat.create_response(
             room.vacancy_info,
@@ -125,14 +129,14 @@ class InterviewService(InterviewServiceBase):
             ai_message.content += chunk
             yield chunk
 
-        user_message.content = room.chat_history.pop(-1).content
-        room.chat_history.append(user_message)
         room.chat_history.append(ai_message)
 
     async def new_task(self, room_id: UUID) -> AsyncGenerator[str, None]:
         """
         Creates a new task for the room with the given id
         """
+
+        logger.info(f"Creating new task for room {room_id}")
 
         room = InterviewService._room_sessions[room_id]
         stream, task = await self.ai_chat.create_task(
@@ -144,12 +148,18 @@ class InterviewService(InterviewServiceBase):
             task.description += chunk
             yield chunk
 
+        room.chat_history.append(
+            Message(role=RoleEnum.AI, type=TypeEnum.TASK, content=task.description)
+        )
+        room.vacancy_info.tasks.append(task)
         room.tasks.append(task)
 
     async def get_current_task_metadata(self, room_id: UUID) -> TaskMetadata:
         """
         Gets the current task metadata for the room with the given id
         """
+
+        logger.info(f"Getting current task metadata for room {room_id}")
 
         room = InterviewService._room_sessions[room_id]
         return TaskMetadata(
@@ -161,6 +171,8 @@ class InterviewService(InterviewServiceBase):
         """
         Creates a response for the room with the given id
         """
+
+        logger.info(f"Sending question {question} for room {room_id}")
 
         room = InterviewService._room_sessions[room_id]
         room.chat_history.append(
@@ -176,6 +188,8 @@ class InterviewService(InterviewServiceBase):
         Gets the response for the room with the given id
         """
 
+        logger.info(f"Getting response for room {room_id}")
+
         room = InterviewService._room_sessions[room_id]
 
         stream, user_message, ai_message = await self.ai_chat.create_response(
@@ -188,9 +202,7 @@ class InterviewService(InterviewServiceBase):
             ai_message.content += chunk
             yield chunk
 
-        user_message.content = room
-        room.chat_history.pop(-1)
-        room.chat_history.append(user_message)
+        room.chat_history[-1].type = user_message.type
         room.chat_history.append(ai_message)
 
     async def stop_room(self, room_id: UUID) -> None:

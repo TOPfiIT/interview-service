@@ -46,7 +46,7 @@ class VacancyService(VacancyServiceBase):
                         return VacancyInfo(
                             profession=json_response["profession"],
                             position=json_response["position"],
-                            requirements=json_response["requirements"],
+                            requirements=", ".join(json_response["requirements"]),
                             questions="",
                             tasks=json_response["tasks"],
                             task_ides=json_response["task_ideas"],
