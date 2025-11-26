@@ -47,6 +47,13 @@ class AIChatBase(Protocol):
         """
         Stream the next interviewer reply and classify message types via <ctrl>.
 
+        How to use:
+        - stream all the text from the body_stream
+        - pass it back into AI message content
+        - Delete previous user message from chat history 
+        - Add updated user message to chat history with old content and new type
+        - Add updated AI message to chat history with the streamed text
+        
         :param vacancy_info: Vacancy information
         :param chat_history: Full chat history up to the latest user message
         :param task: Current task context
@@ -64,6 +71,11 @@ class AIChatBase(Protocol):
     ) -> tuple[AsyncGenerator[str, None], Task]:
         """
         Stream the next task description and derive its metadata from <ctrl>.
+
+        How to use:
+        - stream all the text from the body_stream
+        - pass it back into Task object description
+        - add to the list of tasks in the vacancy info
 
         :param vacancy_info: Vacancy information (with interview_plan)
         :param chat_history: Full chat history so far
