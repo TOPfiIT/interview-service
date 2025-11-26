@@ -60,4 +60,15 @@ class MetricsBlock3:
     seniority_guess: SeniorityGuess
     recommendation: Recommendation
 
-#TODO: Implement tests and code metrics
+@dataclass
+class CodeTestMetrics:
+    """
+    Metrics for code execution and test results during the interview.
+    All fields are simple counters, aggregated over the whole session.
+    """
+
+    passed_tests: int = 0          # Number of tests passed
+    failed_tests: int = 0          # Number of tests failed
+    compile_errors: int = 0        # Number of compilation / syntax error runs
+    runtime_errors: int = 0        # Number of runtime-error runs
+    attempts_count: int = 0        # How many times the user ran the code
