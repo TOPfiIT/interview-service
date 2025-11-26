@@ -186,9 +186,45 @@ async def get_welcome_message_sse(
     tags=["Interview"],
     summary="Get a room",
 )
-async def get_room() -> None:
+async def get_room(
+    request: Request,
+    interview_service: InterviewServiceBase = Depends(),
+) -> InterviewRoom:
     logger.info("Getting room")
-    ...
+
+    room_id: UUID = UUID(request.cookies.get("room_id"))
+
+    room = await interview_service.get_room(room_id)
+
+    tasks: list[Task] = []
+    for task in room.tasks:
+        tasks.append(
+            Task(
+                type=str(task.type),
+                condition=str(task.description),
+                language=task.language or "",
+            )
+        )
+
+    messages: list[Message] = []
+    for message in room.chat_history:
+        messages.append(
+            Message(
+                sender=str(message.role),
+                content=message.content,
+            )
+        )
+
+    interview_room = InterviewRoom(
+        vacancy=VacancyRoom(
+            profession=room.vacancy_info.profession,
+            position=room.vacancy_info.position,
+        ),
+        tasks=tasks,
+        chat=messages,
+    )
+
+    return interview_room
 
 
 @router.post(

@@ -62,6 +62,12 @@ class Settings(BaseSettings):
         alias="OPENAI_API_KEY",
         validation_alias="OPENAI_API_KEY",
     )
+    vacancy_service_url: str = Field(
+        default="http://localhost:80/vacancy/",
+        description="Vacancy service URL",
+        alias="VACANCY_SERVICE_URL",
+        validation_alias="VACANCY_SERVICE_URL",
+    )
 
 
 settings = Settings()

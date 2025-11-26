@@ -25,10 +25,18 @@ class Solution:
     solution_type: SolutionType
     language: str
 
+    def to_string(self) -> str:
+        """
+        Convert solution to string
+        """
+
+        return f"{self.solution_type.value} [{self.language}]: {self.content}"
+
 
 @dataclass
 class Room:
     id: UUID
+    vacancy_id: UUID
     vacancy_info: VacancyInfo
     interviewee: Interviewee
 

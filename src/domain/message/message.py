@@ -35,3 +35,10 @@ class Message:
     role: RoleEnum
     type: TypeEnum
     content: str
+
+    def to_string(self) -> str:
+        """
+        Convert message to string
+        """
+
+        return f"{self.role.value} [{self.type.value}]: {self.content}"

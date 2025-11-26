@@ -1,17 +1,24 @@
-FROM python:3.13-slim
+# Используем multiarch образ Python
+FROM --platform=$BUILDPLATFORM python:3.13-slim
 
 WORKDIR /app
 
-# Install uv and dependencies directly
+# Устанавливаем системные зависимости, необходимые для сборки
+RUN apt-get update && apt-get install -y \
+    build-essential \
+    curl \
+    && rm -rf /var/lib/apt/lists/*
+
+# Устанавливаем uv
 RUN pip install --no-cache-dir uv
 
-# Copy dependency files
+# Копируем файлы зависимостей
 COPY requirements.txt ./
 
-# Install dependencies using uv directly into system python
+# Устанавливаем зависимости
 RUN uv pip install --system -r requirements.txt
 
-# Copy application code
+# Копируем исходный код приложения
 COPY ./src ./src
 
 EXPOSE 8000

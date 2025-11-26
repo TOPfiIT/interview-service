@@ -1,4 +1,5 @@
 from types import CoroutineType
+from src.domain.message.message import Message, TypeEnum
 from src.domain.room.room import Room, Solution, SolutionType, Interviewee
 from src.domain.task.task import Task, TaskMetadata
 from src.domain.vacancy.vacancy import VacancyInfo
@@ -48,6 +49,7 @@ class InterviewService(InterviewServiceBase):
 
         room = Room(
             id=uuid4(),
+            vacancy_id=vacancy_id,
             vacancy_info=vacancy_info,
             interviewee=interviewee,
             chat_history=[],
@@ -58,7 +60,7 @@ class InterviewService(InterviewServiceBase):
         InterviewService._room_sessions[room.id] = room
         logger.info(f"Created room {room.id}")
 
-        # asyncio.create_task(self._stop_room_in(room.id))
+        asyncio.create_task(self._stop_room_in(room.id))
 
         return room
 
@@ -76,6 +78,7 @@ class InterviewService(InterviewServiceBase):
             vacancy_info=room.vacancy_info,
             chat_history=room.chat_history,
         )
+
         async for chunk in stream:  # type: ignore
             yield chunk
 
@@ -92,7 +95,8 @@ class InterviewService(InterviewServiceBase):
         Sends the solution to the room with the given id
         """
 
-        ...
+        room = InterviewService._room_sessions[room_id]
+        return room
 
     async def get_current_task_metadata(self, room_id: UUID) -> TaskMetadata:
         """
