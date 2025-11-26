@@ -29,3 +29,10 @@ class SolutionSentResponse(BaseModel):
 
 class QuestionSentResponse(BaseModel):
     response: str
+
+
+class SendSolutionRequest(BaseModel):
+    solution: str
+    copy_paste_count: int
+    language: str
+    solution_type: str

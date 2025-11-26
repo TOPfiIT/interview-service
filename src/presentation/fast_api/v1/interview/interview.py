@@ -1,10 +1,10 @@
 from fastapi import APIRouter, Depends, Response, Request
 from fastapi.responses import StreamingResponse
-from src.domain.room.room import Interviewee
+from src.domain.room.room import Interviewee, Solution, SolutionType
 from src.schemas.room import (
     InterviewRoom,
-    SolutionSentResponse,
     QuestionSentResponse,
+    SendSolutionRequest,
     Task,
     VacancyRoom,
     Message,
@@ -230,13 +230,99 @@ async def get_room(
 @router.post(
     "/room/solution",
     description="Send a solution",
-    response_model=SolutionSentResponse,
     tags=["Interview"],
     summary="Send a solution",
 )
-async def create_solution(solution: str) -> None:
-    logger.info("Sending solution for")
-    ...
+async def send_solution(
+    request: Request,
+    solution_request: SendSolutionRequest,
+    interview_service: InterviewServiceBase = Depends(),
+):
+    logger.info("Sending solution")
+
+    room_id: UUID = UUID(request.cookies.get("room_id"))
+
+    sol = Solution(
+        content=solution_request.solution,
+        language=solution_request.language,
+        solution_type=SolutionType.CODE
+        if solution_request.solution_type == "code"
+        else SolutionType.TEXT,
+    )
+    await interview_service.send_solution(room_id, sol)
+
+
+@router.get(
+    "/room/solution/response/sse",
+    description="Get a solution response via SSE",
+    tags=["Interview"],
+    summary="Get a solution response via SSE",
+)
+async def get_solution_response_sse(
+    request: Request,
+    interview_service: InterviewServiceBase = Depends(),
+) -> StreamingResponse:
+    logger.info("Getting solution response via SSE")
+
+    room_id: UUID = UUID(request.cookies.get("room_id"))
+
+    async def sse_generator():
+        try:
+            # Отправляем начальное событие
+            yield "data: {}\n\n".format(
+                json.dumps(
+                    {
+                        "type": "start",
+                        "message": "Starting solution response generation",
+                        "room_id": str(room_id),
+                    },
+                    ensure_ascii=False,
+                )
+            )
+
+            # Генерируем solution response и отправляем как SSE
+            async for chunk in interview_service.get_solution_response(room_id):
+                yield "data: {}\n\n".format(
+                    json.dumps(
+                        {
+                            "type": "message_chunk",
+                            "content": chunk,
+                            "timestamp": "2024-01-01T00:00:00Z",  # добавьте реальный timestamp
+                        },
+                        ensure_ascii=False,
+                    )
+                )
+
+            # Отправляем событие завершения
+            yield "data: {}\n\n".format(
+                json.dumps(
+                    {"type": "complete", "message": "Solution response completed"},
+                    ensure_ascii=False,
+                )
+            )
+
+        except Exception as e:
+            # Отправляем событие ошибки
+            yield "data: {}\n\n".format(
+                json.dumps(
+                    {
+                        "type": "error",
+                        "message": f"Error generating solution response: {str(e)}",
+                    },
+                    ensure_ascii=False,
+                )
+            )
+
+    return StreamingResponse(
+        sse_generator(),
+        media_type="text/event-stream; charset=utf-8",
+        headers={
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+            "Access-Control-Allow-Origin": "*",
+            "X-Accel-Buffering": "no",  # Важно для nginx
+        },
+    )
 
 
 @router.post(

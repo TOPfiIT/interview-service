@@ -31,11 +31,15 @@ class InterviewServiceBase(Protocol):
         """
         ...
 
-    async def send_solution(
-        self, room_id: UUID, solution: Solution
-    ) -> AsyncGenerator[str, None]:
+    async def send_solution(self, room_id: UUID, solution: Solution):
         """
         Sends the solution to the room with the given id
+        """
+        ...
+
+    async def get_solution_response(self, room_id: UUID) -> AsyncGenerator[str, None]:
+        """
+        Gets the solution response for the room with the given id
         """
         ...
 
@@ -45,11 +49,21 @@ class InterviewServiceBase(Protocol):
         """
         ...
 
-    async def send_question(
-        self, room_id: UUID, question: str
-    ) -> AsyncGenerator[str, None]:
+    async def new_task(self, room_id: UUID) -> AsyncGenerator[str, None]:
+        """
+        Creates a new task for the room with the given id
+        """
+        ...
+
+    async def send_question(self, room_id: UUID, question: str):
         """
         Sends a question to the room with the given id
+        """
+        ...
+
+    async def get_response(self, room_id: UUID) -> AsyncGenerator[str, None]:
+        """
+        Gets the response for the room with the given id
         """
         ...
 

@@ -1,4 +1,4 @@
-from src.domain.message.message import Message, TypeEnum
+from src.domain.message.message import Message, RoleEnum, TypeEnum
 from src.domain.room.room import Room, Solution, SolutionType, Interviewee
 from src.domain.task.task import Task, TaskMetadata
 from src.domain.vacancy.vacancy import VacancyInfo
@@ -78,8 +78,17 @@ class InterviewService(InterviewServiceBase):
             chat_history=room.chat_history,
         )
 
+        message = Message(
+            role=RoleEnum.AI,
+            type=TypeEnum.RESPONSE,
+            content="",
+        )
+
         async for chunk in stream:  # type: ignore
+            message.content += chunk
             yield chunk
+
+        room.chat_history.append(message)
 
     async def get_room(self, room_id: UUID) -> Room:
         """
@@ -87,15 +96,55 @@ class InterviewService(InterviewServiceBase):
         """
         return InterviewService._room_sessions[room_id]
 
-    async def send_solution(
-        self, room_id: UUID, solution: Solution
-    ) -> AsyncGenerator[str, None]:
+    async def send_solution(self, room_id: UUID, solution: Solution):
         """
         Sends the solution to the room with the given id
         """
 
         room = InterviewService._room_sessions[room_id]
-        return room
+        room.solutions.append(solution)
+        room.chat_history.append(
+            Message(
+                role=RoleEnum.USER, type=TypeEnum.SOLUTION, content=solution.content
+            )
+        )
+
+    async def get_solution_response(self, room_id: UUID) -> AsyncGenerator[str, None]:
+        """
+        Gets the solution response for the room with the given id
+        """
+
+        room = InterviewService._room_sessions[room_id]
+        stream, user_message, ai_message = await self.ai_chat.create_response(
+            room.vacancy_info,
+            room.chat_history,
+            room.tasks[-1],
+        )
+
+        async for chunk in stream:  # type: ignore
+            ai_message.content += chunk
+            yield chunk
+
+        user_message.content = room.chat_history.pop(-1).content
+        room.chat_history.append(user_message)
+        room.chat_history.append(ai_message)
+
+    async def new_task(self, room_id: UUID) -> AsyncGenerator[str, None]:
+        """
+        Creates a new task for the room with the given id
+        """
+
+        room = InterviewService._room_sessions[room_id]
+        stream, task = await self.ai_chat.create_task(
+            room.vacancy_info,
+            room.chat_history,
+        )
+
+        async for chunk in stream:  # type: ignore
+            task.description += chunk
+            yield chunk
+
+        room.tasks.append(task)
 
     async def get_current_task_metadata(self, room_id: UUID) -> TaskMetadata:
         """
@@ -104,18 +153,54 @@ class InterviewService(InterviewServiceBase):
 
         room = InterviewService._room_sessions[room_id]
         return TaskMetadata(
-            type=room.tasks[0].type,
-            language=room.tasks[0].language,
+            type=room.tasks[-1].type,
+            language=room.tasks[-1].language,
         )
 
-    async def send_question(
-        self, room_id: UUID, question: str
-    ) -> AsyncGenerator[str, None]: ...
+    async def send_question(self, room_id: UUID, question: str):
+        """
+        Creates a response for the room with the given id
+        """
+
+        room = InterviewService._room_sessions[room_id]
+        room.chat_history.append(
+            Message(
+                role=RoleEnum.USER,
+                type=TypeEnum.QUESTION,
+                content=question,
+            )
+        )
+
+    async def get_response(self, room_id: UUID) -> AsyncGenerator[str, None]:
+        """
+        Gets the response for the room with the given id
+        """
+
+        room = InterviewService._room_sessions[room_id]
+
+        stream, user_message, ai_message = await self.ai_chat.create_response(
+            room.vacancy_info,
+            room.chat_history,
+            room.tasks[-1],
+        )
+
+        async for chunk in stream:  # type: ignore
+            ai_message.content += chunk
+            yield chunk
+
+        user_message.content = room
+        room.chat_history.pop(-1)
+        room.chat_history.append(user_message)
+        room.chat_history.append(ai_message)
 
     async def stop_room(self, room_id: UUID) -> None:
         """
         Stops the room with the given id
         """
+
+        if room_id not in InterviewService._room_sessions:
+            logger.info(f"Room {room_id} not found")
+            return
 
         logger.info(f"Stopping room {room_id}")
 

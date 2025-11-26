@@ -39,7 +39,7 @@ class AIChatBase(Protocol):
         VacancyInfo: VacancyInfo,
         chat_history: list[Message],
         task: Task,
-    ) -> str:
+    ) -> tuple[AsyncGenerator[str, None], Message, Message]:
         """
         Create AI response
 
@@ -51,11 +51,8 @@ class AIChatBase(Protocol):
         ...
 
     async def create_task(
-        self,
-        VacancyInfo: VacancyInfo,
-        chat_history: list[Message],
-        description: str
-    ) -> Task:
+        self, VacancyInfo: VacancyInfo, chat_history: list[Message]
+    ) -> tuple[AsyncGenerator[str, None], Task]:
         """
         Create AI task
         :param VacancyInfo: Vacancy information
