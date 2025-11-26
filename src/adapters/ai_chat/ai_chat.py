@@ -59,11 +59,7 @@ class AIChat(AIChatBase):
             {"role": "user", "content": user_prompt},
         ]
 
-        raw_stream = get_chat_completion_stream(
-            self.client,
-            settings.llm_model,
-            messages,
-        )
+        
         
         return 
 
