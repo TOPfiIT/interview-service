@@ -49,34 +49,19 @@ dotenv.load_dotenv()
 
 
 class AIChat(AIChatBase):
-    """
-    LLM-backed implementation of the interview chat, task, and metrics logic.
-    """
-
-    def __init__(self) -> None:
-        """
-        Initialize OpenAI-compatible async client from settings.
-        """
+    def __init__(self):
         self.client = AsyncOpenAI(
             api_key=settings.openai_api_key,
             base_url=settings.openai_base_url,
         )
-
-    # --------------------------------------------------------------------- #
-    # CHAT PLAN
-    # --------------------------------------------------------------------- #
 
     async def create_chat(
         self,
         vacancy_info: VacancyInfo,
         chat_history: list[Message],
     ) -> VacancyInfo:
-        """
-        Generate or update the INTERNAL interview plan for the vacancy.
-        """
         system_prompt = build_chat_plan_system_prompt()
         plan_prompt = build_chat_plan_prompt(vacancy_info)
-
         messages = [
             {"role": "system", "content": system_prompt},
             {"role": "user", "content": plan_prompt},
@@ -86,7 +71,6 @@ class AIChat(AIChatBase):
             model=settings.llm_model,
             messages=messages,
         )
-
         interview_plan = completion.choices[0].message.content.strip()
         interview_plan = remove_thinking_part(interview_plan)
 
@@ -94,18 +78,11 @@ class AIChat(AIChatBase):
         updated_vacancy.interview_plan = interview_plan
         return updated_vacancy
 
-    # --------------------------------------------------------------------- #
-    # WELCOME MESSAGE
-    # --------------------------------------------------------------------- #
-
     async def generate_welcome_message(
         self,
         vacancy_info: VacancyInfo,
         chat_history: list[Message],
     ) -> AsyncGenerator[str, None]:
-        """
-        Stream the first welcome message, hiding any <think>...</think> content.
-        """
         system_prompt = build_chat_system_prompt()
         user_prompt = build_chat_welcome_user_prompt(vacancy_info, chat_history)
 
@@ -120,12 +97,8 @@ class AIChat(AIChatBase):
             messages,
         )
 
-        stream = filter_thinking_chunks(raw_stream)
+        stream = await filter_thinking_chunks(raw_stream)
         return stream
-
-    # --------------------------------------------------------------------- #
-    # CREATE RESPONSE
-    # --------------------------------------------------------------------- #
 
     async def create_response(
         self,
@@ -133,9 +106,6 @@ class AIChat(AIChatBase):
         chat_history: list[Message],
         task: Task,
     ) -> tuple[AsyncGenerator[str, None], Message, Message]:
-        """
-        Stream the next interviewer reply and classify user/AI message types via <ctrl>.
-        """
         system_prompt, user_prompt = build_response_prompts(
             vacancy_info=vacancy_info,
             chat_history=chat_history,
@@ -153,7 +123,6 @@ class AIChat(AIChatBase):
             messages,
         )
 
-        # TODO: Add error handling and retry handling for strip_think_and_ctrl
         control, body_stream = await strip_think_and_ctrl(raw_stream)
 
         user_type = map_user_type(control.get("user_type"))
@@ -162,29 +131,22 @@ class AIChat(AIChatBase):
         user_message = Message(
             role=RoleEnum.USER,
             type=user_type,
-            content="",  # filled elsewhere with actual user text
+            content="",
         )
 
         ai_message = Message(
             role=RoleEnum.AI,
             type=assistant_type,
-            content="",  # will be filled from streamed body
+            content="",
         )
 
         return body_stream, user_message, ai_message
-
-    # --------------------------------------------------------------------- #
-    # CREATE TASK
-    # --------------------------------------------------------------------- #
 
     async def create_task(
         self,
         vacancy_info: VacancyInfo,
         chat_history: list[Message],
     ) -> tuple[AsyncGenerator[str, None], Task]:
-        """
-        Stream the next task text and derive Task type/language from <ctrl>.
-        """
         system_prompt = build_create_task_system_prompt()
         user_prompt = build_create_task_user_prompt(vacancy_info, chat_history)
 
@@ -199,7 +161,6 @@ class AIChat(AIChatBase):
             messages,
         )
 
-        # TODO: Add error handling and retry handling for strip_think_and_ctrl
         control, body_stream = await strip_think_and_ctrl(raw_stream)
 
         task_type = map_task_type(control.get("task_type"))
@@ -208,14 +169,10 @@ class AIChat(AIChatBase):
         task = Task(
             type=task_type,
             language=task_language,
-            description="",  # caller can fill from streamed text
+            description="",
         )
 
         return body_stream, task
-
-    # --------------------------------------------------------------------- #
-    # METRICS (BLOCK 2 + BLOCK 3)
-    # --------------------------------------------------------------------- #
 
     async def create_metrics(
         self,
@@ -223,10 +180,6 @@ class AIChat(AIChatBase):
         chat_history: list[Message],
         metrics_block1: MetricsBlock1,
     ) -> tuple[MetricsBlock1, MetricsBlock2, MetricsBlock3]:
-        """
-        Compute MetricsBlock2 and MetricsBlock3 from vacancy, chat, and MetricsBlock1.
-        """
-        # -------- Block 2: summary + local scores + tech fit --------
         system_prompt_b2 = build_metrics_block2_system_prompt()
         user_prompt_b2 = build_metrics_block2_user_prompt(
             vacancy_info=vacancy_info,
@@ -243,11 +196,9 @@ class AIChat(AIChatBase):
             model=settings.llm_model,
             messages=messages_b2,
         )
-
         raw_json_b2 = completion_b2.choices[0].message.content
         metrics_block2 = parse_metrics_block2(raw_json_b2)
 
-        # -------- Block 3: final verdict --------
         system_prompt_b3 = build_metrics_block3_system_prompt()
         user_prompt_b3 = build_metrics_block3_user_prompt(
             vacancy_info=vacancy_info,
@@ -265,15 +216,10 @@ class AIChat(AIChatBase):
             model=settings.llm_model,
             messages=messages_b3,
         )
-
         raw_json_b3 = completion_b3.choices[0].message.content
         metrics_block3 = parse_metrics_block3(raw_json_b3)
 
         return metrics_block1, metrics_block2, metrics_block3
-
-    # --------------------------------------------------------------------- #
-    # CREATE TEST SUITE
-    # --------------------------------------------------------------------- #
 
     async def create_test_suite(
         self,
@@ -281,10 +227,6 @@ class AIChat(AIChatBase):
         chat_history: list[Message],
         task: Task,
     ) -> CodeTestSuite:
-        """
-        Create a test suite for a coding task.
-        Uses streaming under the hood but accumulates into a single JSON string.
-        """
         total_tests = settings.tests_per_task
 
         system_prompt = build_test_suite_system_prompt()
@@ -320,10 +262,6 @@ class AIChat(AIChatBase):
 
         return suite
 
-    # --------------------------------------------------------------------- #
-    # CHECK SOLUTION
-    # --------------------------------------------------------------------- #
-
     async def check_solution(
         self,
         vacancy_info: VacancyInfo,
@@ -332,9 +270,6 @@ class AIChat(AIChatBase):
         solution: str,
         tests: CodeTestSuite,
     ) -> tuple[AsyncGenerator[str, None], Message]:
-        """
-        Check the solution for a coding task and stream feedback to the candidate.
-        """
         system_prompt = build_check_solution_system_prompt()
         user_prompt = build_check_solution_user_prompt(
             vacancy_info=vacancy_info,
@@ -355,13 +290,12 @@ class AIChat(AIChatBase):
             messages,
         )
 
-        # Strip <think>...</think>, pass only visible text
-        stream = filter_thinking_chunks(raw_stream)
+        stream = await filter_thinking_chunks(raw_stream)
 
         ai_message = Message(
             role=RoleEnum.AI,
             type=TypeEnum.CHECK_SOLUTION,
-            content="",  # caller fills from `stream`
+            content="",
         )
 
         return stream, ai_message
