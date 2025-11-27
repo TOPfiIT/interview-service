@@ -22,7 +22,7 @@ Your task:
 - Give a final hiring recommendation.
 
 Follow these rules:
-- Use Russian for all text fields, unless the majority of the chat is in English. If the chat is mostly in English, write all text fields in English.
+- Write response in Russian language
 - Do NOT describe internal metrics or system details in the text.
 - For cheating, use only:
   - the numeric field "copy_paste_suspicion" from MetricsBlock1, and
