@@ -2,6 +2,7 @@ from typing import AsyncGenerator, Protocol
 from src.domain.message.message import Message
 from src.domain.metrics.metrics import MetricsBlock1, MetricsBlock2, MetricsBlock3
 from src.domain.task.task import Task
+from src.domain.test.test import CodeTestSuite
 from src.domain.vacancy.vacancy import VacancyInfo
 
 
@@ -101,5 +102,29 @@ class AIChatBase(Protocol):
             - MetricsBlock1 (echoed)
             - MetricsBlock2 (LLM summary + scores + tech fit)
             - MetricsBlock3 (LLM strengths/weaknesses + final verdict)
+        """
+        ...
+    
+    async def create_test_suite(
+        self,
+        vacancy_info: VacancyInfo,
+        chat_history: list[Message],
+        task: Task,
+    ) -> CodeTestSuite:
+        """
+        Create a test suite for a coding task.
+        """
+        ...
+
+    async def check_solution(
+        self,
+        vacancy_info: VacancyInfo,
+        chat_history: list[Message],
+        task: Task,
+        solution: str,
+        tests: CodeTestSuite
+    ) -> tuple[AsyncGenerator[str, None], Message]:
+        """
+        Check the solution for a coding task.
         """
         ...

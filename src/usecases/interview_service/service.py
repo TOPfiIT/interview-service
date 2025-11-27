@@ -8,7 +8,11 @@ from typing import AsyncGenerator, Any
 from src.usecases.interfaces.vacancy_service import VacancyServiceBase
 from src.usecases.interfaces.ai_chat import AIChatBase
 import asyncio
+from datetime import datetime, timedelta
 from loguru import logger
+from src.domain.metrics.metrics import MetricsBlock1
+
+from datetime import datetime
 
 
 class InterviewService(InterviewServiceBase):
@@ -54,6 +58,15 @@ class InterviewService(InterviewServiceBase):
             chat_history=[],
             tasks=[],
             solutions=[],
+            metrics=[],
+            created_at=datetime.now(),
+            last_task_time=datetime.now(),
+            metrics_block1=MetricsBlock1(
+                time_spent=timedelta(seconds=0),
+                time_per_task=timedelta(seconds=0),
+                answers_count=0,
+                copy_paste_suspicion=0,
+            ),
         )
 
         InterviewService._room_sessions[room.id] = room
@@ -103,8 +116,11 @@ class InterviewService(InterviewServiceBase):
 
         logger.info(f"Sending solution {solution.content}")
 
-        room = InterviewService._room_sessions[room_id]
+        room: Room = InterviewService._room_sessions[room_id]
         room.solutions.append(solution)
+
+        room.metrics_block1.copy_paste_suspicion += solution.count_suspicious_copy_paste
+
         room.chat_history.append(
             Message(
                 role=RoleEnum.USER, type=TypeEnum.SOLUTION, content=solution.content
@@ -216,8 +232,66 @@ class InterviewService(InterviewServiceBase):
 
         logger.info(f"Stopping room {room_id}")
 
-        room = InterviewService._room_sessions[room_id]
+        room: Room = InterviewService._room_sessions[room_id]
         del InterviewService._room_sessions[room_id]
+
+        logger.info(f"Getting metrics for room {room_id}")
+
+        user_message_len = len(
+            [
+                msg
+                for msg in room.chat_history
+                if msg.type == TypeEnum.ANSWER or msg.type == TypeEnum.SOLUTION
+            ]
+        )
+
+        room.metrics_block1.time_spent = datetime.now() - room.created_at
+        room.metrics_block1.time_per_task = (
+            room.last_task_time - room.created_at
+        ) / user_message_len
+        room.metrics_block1.answers_count = user_message_len
+
+        metrics1, metrics2, metrics3 = await self.ai_chat.create_metrics(
+            room.vacancy_info,
+            room.chat_history,
+            room.metrics_block1,
+        )
+
+        room.metrics.append(metrics1.time_spent_str())
+        room.metrics.append(metrics1.time_per_task_str())
+        room.metrics.append(metrics1.answers_count_str())
+        room.metrics.append(metrics1.copy_paste_suspicion_str())
+
+        room.metrics.append(metrics2.summary_str())
+        room.metrics.append(metrics2.clarity_score_str())
+        room.metrics.append(metrics2.completeness_score_str())
+        room.metrics.append(metrics2.feedback_response_str())
+        room.metrics.append(metrics2.tech_fit_level_str())
+        room.metrics.append(metrics2.tech_fit_comment_str())
+
+        room.metrics.append(metrics3.strengths_str())
+        room.metrics.append(metrics3.weaknesses_str())
+        room.metrics.append(metrics3.cheating_summary_str())
+        room.metrics.append(metrics3.seniority_guess_str())
+        room.metrics.append(metrics3.recommendation_str())
+
+        logger.info(metrics1.time_spent_str())
+        logger.info(metrics1.time_per_task_str())
+        logger.info(metrics1.answers_count_str())
+        logger.info(metrics1.copy_paste_suspicion_str())
+
+        logger.info(metrics2.summary_str())
+        logger.info(metrics2.clarity_score_str())
+        logger.info(metrics2.completeness_score_str())
+        logger.info(metrics2.feedback_response_str())
+        logger.info(metrics2.tech_fit_level_str())
+        logger.info(metrics2.tech_fit_comment_str())
+
+        logger.info(metrics3.strengths_str())
+        logger.info(metrics3.weaknesses_str())
+        logger.info(metrics3.cheating_summary_str())
+        logger.info(metrics3.seniority_guess_str())
+        logger.info(metrics3.recommendation_str())
 
         logger.info("Send metrics")
 

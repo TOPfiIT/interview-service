@@ -258,3 +258,44 @@ if __name__ == "__main__":
         Task(type=TaskType.THEORY, language=None, description="Write a theory for the task"),
     )
     print(response_user_prompt)
+
+# ---------- CREATE TEST SUITE ----------
+
+def build_test_suite_system_prompt() -> str:
+    """
+    Load the static system prompt for test suite generation.
+    """
+    return load_prompt("system/create_test_suite_system_prompt.txt")
+
+
+def build_test_suite_user_prompt(
+    vacancy_info: VacancyInfo,
+    chat_history: list[Message],
+    task: Task,
+    total_tests: int,
+) -> str:
+    """
+    Build the dynamic user prompt for test suite generation.
+
+    :param vacancy_info: vacancy context (role, stack, etc.)
+    :param chat_history: full chat between interviewer and candidate
+    :param task: current coding task (TaskType.CODE expected)
+    :param total_tests: total number of tests N the model must generate
+    """
+    template = load_prompt("user/create_test_suite_prompt.txt")
+
+    vacancy_str = str(vacancy_info)
+    history_str = _format_chat_history(chat_history)
+
+    task_type = task.type.value
+    task_language = task.language.value if getattr(task, "language", None) else "python"
+    task_description = task.description
+
+    return template.format(
+        vacancy_info=vacancy_str,
+        chat_history=history_str,
+        task_type=task_type,
+        task_language=task_language,
+        task_description=task_description,
+        total_tests=total_tests,
+    )

@@ -1,8 +1,11 @@
 from dataclasses import dataclass
+from src.domain.metrics.metrics import MetricsBlock1
 from src.domain.vacancy.vacancy import VacancyInfo
 from uuid import UUID
 from src.domain.task.task import Task
 from src.domain.message.message import Message
+from datetime import timedelta
+from datetime import datetime
 
 from enum import Enum
 
@@ -33,6 +36,7 @@ class Solution:
     content: str
     solution_type: SolutionType
     language: str
+    count_suspicious_copy_paste: int = 0
 
     def to_string(self) -> str:
         """
@@ -52,3 +56,9 @@ class Room:
     chat_history: list[Message]
     tasks: list[Task]
     solutions: list[Solution]
+    metrics: list[str]
+
+    created_at: datetime
+    last_task_time: datetime
+
+    metrics_block1: MetricsBlock1

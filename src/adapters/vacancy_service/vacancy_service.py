@@ -79,7 +79,7 @@ class VacancyService(VacancyServiceBase):
             "tasks": [task.description for task in room.tasks],
             "solutions": [solution.to_string() for solution in room.solutions],
             "chat_history": [message.to_string() for message in room.chat_history],
-            "metrics": [],
+            "metrics": room.metrics,
         }
 
         async with aiohttp.ClientSession() as session:

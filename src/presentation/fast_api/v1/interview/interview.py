@@ -184,7 +184,6 @@ async def get_welcome_message_sse(
             headers={
                 "Cache-Control": "no-cache",
                 "Connection": "keep-alive",
-                "Access-Control-Allow-Origin": "*",
                 "X-Accel-Buffering": "no",  # Важно для nginx
             },
         )
@@ -265,6 +264,7 @@ async def send_solution(
             solution_type=SolutionType.CODE
             if solution_request.solution_type == "code"
             else SolutionType.TEXT,
+            count_suspicious_copy_paste=solution_request.copy_paste_count,
         )
         await interview_service.send_solution(room_id, sol)
     except Exception as e:
@@ -367,7 +367,6 @@ async def get_solution_response_sse(
             headers={
                 "Cache-Control": "no-cache",
                 "Connection": "keep-alive",
-                "Access-Control-Allow-Origin": "*",
                 "X-Accel-Buffering": "no",  # Важно для nginx
             },
         )
@@ -493,7 +492,6 @@ async def get_question_response_sse(
             headers={
                 "Cache-Control": "no-cache",
                 "Connection": "keep-alive",
-                "Access-Control-Allow-Origin": "*",
                 "X-Accel-Buffering": "no",  # Важно для nginx
             },
         )
@@ -598,7 +596,6 @@ async def get_task_sse(
             headers={
                 "Cache-Control": "no-cache",
                 "Connection": "keep-alive",
-                "Access-Control-Allow-Origin": "*",
                 "X-Accel-Buffering": "no",  # Важно для nginx
             },
         )
