@@ -18,7 +18,7 @@ Your task:
 - Evaluate overall technical fit for the job as ("low", "medium", or "high") and explain why.
 
 Follow these rules:
-- Use Russian for all text fields, unless the majority of the chat is in English. If the chat is mostly in English, write all text fields in English.
+- Write response in Russian language
 - Do NOT describe internal metrics or system details in the text.
 - Do NOT accuse the candidate of cheating unless this is clearly supported by the numeric metrics and by obvious evidence in the chat.
 - If the candidate gave almost no answers or only irrelevant messages, use 0 or 1 for clarity/completeness and explain that in the summary.

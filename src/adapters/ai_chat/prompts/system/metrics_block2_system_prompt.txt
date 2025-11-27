@@ -40,8 +40,7 @@ You must output JSON with EXACTLY these fields and types:
   - 5 – fully complete, covers all key aspects
 
 - "feedback_response": string  
-  A short message about how well the candidate used hints from the interviewer.
-  This must be written in the SAME language you chose above (Russian or English).
+  A short message about how well the candidate used hints from the interviewer in Russian language.
 
 - "tech_fit_level": string
   Overall technical fit level for this vacancy. Must be EXACTLY one of:

@@ -10,9 +10,7 @@ Important:
 - You must return ONLY a single valid JSON object and nothing else. No markdown, no comments, no extra text.
 
 Language rules:
-- If the majority of the chat (questions and answers) is in English, write all text fields in English.
-- Otherwise, default to Russian for all text fields.
-- Do not mix languages in one field.
+- Write response in Russian language
 
 You must output JSON with EXACTLY these fields and types:
 
