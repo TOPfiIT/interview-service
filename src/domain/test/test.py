@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+from typing import Optional
 
 @dataclass
 class CodeTestCase:
@@ -9,8 +10,9 @@ class CodeTestCase:
     id: str
     input_data: str
     expected_output: str
-    is_hidden: bool = False  # False = visible example, True = hidden evaluation test
-
+    result: Optional[str] = None     # None = not executed yet
+    correct: Optional[bool] = None   # None = not evaluated yet
+    is_hidden: bool = False          # False = visible example, True = hidden evaluation test
 
 @dataclass
 class CodeTestSuite:

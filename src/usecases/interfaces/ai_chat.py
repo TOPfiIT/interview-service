@@ -1,5 +1,4 @@
 from typing import AsyncGenerator, Protocol
-from unittest import TestSuite
 from src.domain.message.message import Message
 from src.domain.metrics.metrics import MetricsBlock1, MetricsBlock2, MetricsBlock3
 from src.domain.task.task import Task
@@ -123,7 +122,7 @@ class AIChatBase(Protocol):
         chat_history: list[Message],
         task: Task,
         solution: str,
-        tests: TestSuite
+        tests: CodeTestSuite
     ) -> tuple[AsyncGenerator[str, None], Message]:
         """
         Check the solution for a coding task.
