@@ -345,45 +345,67 @@ def _format_test_suite(suite: CodeTestSuite) -> str:
 
     return "\n".join(lines)
 
+def _format_test_suite_for_prompt(suite: CodeTestSuite) -> str:
+    """
+    Serialize CodeTestSuite into a compact, readable text snippet for the LLM.
+    Includes test results (status, stdout, stderr, correct, visibility).
+    """
+    lines: list[str] = [f"task_id: {suite.task_id}", "tests:"]
+    for t in suite.tests:
+        visibility = "hidden" if t.is_hidden else "visible"
+        lines.append(
+            f"- id={t.id}; visibility={visibility}; "
+            f"input={repr(t.input_data)}; "
+            f"expected_output={repr(t.expected_output)}; "
+            f"correct={t.correct}; "
+            f"status={getattr(t, 'status', None)}; "
+            f"stdout={repr(getattr(t, 'stdout', None))}; "
+            f"stderr={repr(getattr(t, 'stderr', None))}"
+        )
+    return "\n".join(lines)
+
+
 def build_check_solution_system_prompt() -> str:
     """
     Load the static system prompt for solution checking.
     """
     return load_prompt("system/check_solution_system_prompt.txt")
 
+
 def build_check_solution_user_prompt(
     vacancy_info: VacancyInfo,
     chat_history: list[Message],
     task: Task,
     solution: str,
-    test_suite: CodeTestSuite,
+    tests: CodeTestSuite,
 ) -> str:
     """
-    Build the dynamic user prompt for the solution checker.
+    Build the dynamic user prompt for solution checking.
 
-    It includes:
-      - vacancy info,
-      - current task,
-      - candidate’s solution code,
-      - executed tests (with their results),
-      - full chat history.
+    Must match placeholders in `check_solution_prompt.txt`:
+      {vacancy_info}, {task_type}, {task_language},
+      {task_description}, {solution}, {test_suite}, {chat_history}
     """
     template = load_prompt("user/check_solution_prompt.txt")
 
     vacancy_str = str(vacancy_info)
     history_str = _format_chat_history(chat_history)
-    tests_str = _format_test_suite(test_suite)
 
-    task_type = task.type.value
-    task_language = task.language.value if task.language is not None else "python"  # safe default
-    task_description = task.description
+    task_type = task.type.value if getattr(task, "type", None) else "unknown"
+    task_language = (
+        task.language.value
+        if getattr(task, "language", None)
+        else "not_specified"
+    )
+
+    test_suite_str = _format_test_suite_for_prompt(tests)
 
     return template.format(
         vacancy_info=vacancy_str,
         task_type=task_type,
         task_language=task_language,
-        task_description=task_description,
+        task_description=task.description,
         solution=solution,
-        test_suite=tests_str,
+        test_suite=test_suite_str,
         chat_history=history_str,
     )
