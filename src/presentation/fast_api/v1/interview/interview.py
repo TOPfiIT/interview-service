@@ -561,7 +561,7 @@ async def get_task_sse(
                 )
 
                 # Генерируем task и отправляем как SSE
-                async for chunk in interview_service.new_tasks(room_id):
+                async for chunk in interview_service.new_task(room_id):
                     yield "data: {}\n\n".format(
                         json.dumps(
                             {
