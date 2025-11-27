@@ -60,6 +60,10 @@ class AIChat(AIChatBase):
         vacancy_info: VacancyInfo,
         chat_history: list[Message],
     ) -> VacancyInfo:
+        """
+        Generate or update the INTERNAL interview plan for the vacancy
+        using streaming, then collect it into a single string.
+        """
         system_prompt = build_chat_plan_system_prompt()
         plan_prompt = build_chat_plan_prompt(vacancy_info)
         messages = [
@@ -67,12 +71,20 @@ class AIChat(AIChatBase):
             {"role": "user", "content": plan_prompt},
         ]
 
-        completion = await self.client.chat.completions.create(
-            model=settings.llm_model,
-            messages=messages,
+        # Stream the completion instead of a single blocking call
+        raw_stream = await get_chat_completion_stream(
+            self.client,
+            settings.llm_model,
+            messages,
         )
-        interview_plan = completion.choices[0].message.content.strip()
-        interview_plan = remove_thinking_part(interview_plan)
+
+        chunks: list[str] = []
+        async for chunk in raw_stream:
+            if chunk:
+                chunks.append(chunk)
+
+        full_text = "".join(chunks)
+        interview_plan = remove_thinking_part(full_text).strip()
 
         updated_vacancy = vacancy_info
         updated_vacancy.interview_plan = interview_plan
