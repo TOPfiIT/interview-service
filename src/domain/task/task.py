@@ -7,10 +7,21 @@ class TaskType(str, Enum):
     CODE = "code"
     THEORY = "theory"
 
+    def __str__(self):
+        return self.value
+
+    def __repr__(self):
+        return self.value
+
+    def __eq__(self, other):
+        return self.value == other
+
+
 class TaskLanguage(str, Enum):
     """
     Task language enum
     """
+
     PYTHON = "python"
     JAVASCRIPT = "javascript"
     JAVA = "java"
@@ -20,6 +31,16 @@ class TaskLanguage(str, Enum):
     PHP = "php"
     RUBY = "ruby"
     GO = "go"
+
+    def __str__(self):
+        return self.value
+
+    def __repr__(self):
+        return self.value
+
+    def __eq__(self, other):
+        return self.value == other
+
 
 @dataclass
 class TaskMetadata:

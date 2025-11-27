@@ -73,11 +73,13 @@ class VacancyService(VacancyServiceBase):
 
         data: dict[str, Any] = {
             "name": room.interviewee.name,
+            "profession": room.vacancy_info.profession,
             "surname": room.interviewee.surname,
             "resume_link": room.interviewee.resume_link,
             "tasks": [task.description for task in room.tasks],
-            "solitions": [solution.to_string() for solution in room.solutions],
+            "solutions": [solution.to_string() for solution in room.solutions],
             "chat_history": [message.to_string() for message in room.chat_history],
+            "metrics": [],
         }
 
         async with aiohttp.ClientSession() as session:

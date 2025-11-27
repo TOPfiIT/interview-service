@@ -378,7 +378,6 @@ async def get_solution_response_sse(
 
 @router.post(
     "/room/question",
-    response_model=QuestionSentResponse,
     description="Send a question",
     tags=["Interview"],
     summary="Send a question",
@@ -387,7 +386,7 @@ async def create_question(
     question: QuestionSendRequest,
     request: Request,
     interview_service: InterviewServiceBase = Depends(),
-) -> None:
+):
     try:
         logger.info("Sending question")
 
@@ -642,7 +641,7 @@ async def get_current_task_metadata(
 async def stop_room(
     request: Request,
     interview_service: InterviewServiceBase = Depends(),
-) -> None:
+):
     try:
         logger.info("Stopping room")
 
