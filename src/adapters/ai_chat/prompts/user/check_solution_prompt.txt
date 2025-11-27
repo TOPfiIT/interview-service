@@ -1,0 +1,53 @@
+You are given data for evaluating a coding task solution.
+
+Vacancy info (for context only, do not repeat it fully):
+{vacancy_info}
+
+Current coding task:
+- Type: {task_type}
+- Language: {task_language}
+- Description:
+{task_description}
+
+Candidate's current solution (full source code; do NOT reformat it):
+`LANGUAGE: {task_language}`
+`CODE START`
+{solution}
+`CODE END`
+
+Executed tests for this solution:
+{test_suite}
+
+Full chat history between interviewer and candidate (oldest → newest):
+{chat_history}
+
+Your job now:
+
+1. Analyze how well the solution works:
+   - Use the test results (status, stdout, stderr, correctness flags).
+   - Consider which tests are visible (is_hidden = False) and which are hidden (is_hidden = True).
+
+2. Determine the feedback phase:
+   - If there is NO previous interviewer message with type [check_solution] for this task in the chat history, treat this as the FIRST check.
+   - If there IS at least one interviewer message with type [check_solution] already, treat this as a LATER check (the candidate has already received hints before).
+
+3. Based on the phase, generate feedback for the candidate:
+
+   First check:
+   - Briefly state how many tests passed and how many failed (an approximate phrasing is fine, e.g. "пройдено 3 из 10 тестов").
+   - You may refer to VISIBLE tests and explain in a simple way what kind of mistake appeared there (wrong result for a small input, wrong formatting, etc.).
+   - Give 1–2 short, concrete hints on what to review in the code (edge cases, negative numbers, empty input, off-by-one issues, formatting of output, etc.).
+   - Do NOT reveal the exact input/output of hidden tests.
+
+   Later check:
+   - Briefly describe the current status of the solution (rough idea of how many tests pass, whether there are still errors).
+   - Politely explain that the hint limit for this task has been reached and the candidate should move on to the next task or finish the interview.
+   - Do NOT give new hints and do NOT point to the exact cause of the remaining errors.
+
+Answer rules:
+- Your reply MUST be written in Russian only.
+- Do NOT reveal the contents (input/expected_output) of hidden tests.
+- Do NOT provide a full correct solution. Short partial code fragments are allowed only if they do not constitute a complete working solution.
+- Keep the message reasonably short: about 4–10 sentences, focused and concrete.
+
+Return ONLY the final message text for the candidate in Russian, with no JSON, no tags, and no extra explanations.

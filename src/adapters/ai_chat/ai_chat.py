@@ -29,15 +29,16 @@ from src.adapters.ai_chat.ai_utils.prompt_builders import (
     build_chat_welcome_user_prompt,
     build_test_suite_system_prompt,
     build_test_suite_user_prompt,
+    build_check_solution_system_prompt,
+    build_check_solution_user_prompt,
 )
 from src.adapters.ai_chat.ai_utils.streams import strip_think_and_ctrl, filter_thinking_chunks
-from src.domain.message.message import Message
+from src.domain.message.message import Message, RoleEnum, TypeEnum
 from src.domain.metrics.metrics import MetricsBlock1, MetricsBlock2, MetricsBlock3
 from src.domain.task.task import Task
 from src.domain.test.test import CodeTestSuite
 from src.domain.vacancy.vacancy import VacancyInfo
 from src.usecases.interfaces.ai_chat import AIChatBase
-from src.domain.message.message import RoleEnum
 from src.adapters.ai_chat.ai_utils.json_parsers import (
     parse_metrics_block2,
     parse_metrics_block3,
@@ -301,3 +302,62 @@ class AIChat(AIChatBase):
         )
 
         return suite
+
+    async def check_solution(
+        self,
+        vacancy_info: VacancyInfo,
+        chat_history: list[Message],
+        task: Task,
+        solution: str,
+        tests: CodeTestSuite,
+    ) -> tuple[AsyncGenerator[str, None], Message]:
+        """
+        Check the solution for a coding task and stream feedback to the candidate.
+
+        The model:
+        - Sees vacancy_info, chat_history, task, candidate code, and executed tests.
+        - Decides whether this is the first check or a later one (based on chat_history).
+        - On first check: gives limited hints + mentions test status.
+        - On later checks: gives status and politely asks to move on, no new hints.
+        
+        How to use:
+        - stream all the text from the stream
+        - pass it back into AI message content
+        - add to the chat history
+
+        Returns:
+          - stream: async generator of feedback text chunks (with <think> stripped).
+          - ai_message: Message stub (role=AI, type=CHECK_SOLUTION, empty content).
+            Caller should accumulate streamed chunks into ai_message.content.
+        """
+        system_prompt = build_check_solution_system_prompt()
+        user_prompt = build_check_solution_user_prompt(
+            vacancy_info=vacancy_info,
+            chat_history=chat_history,
+            task=task,
+            solution=solution,
+            tests=tests,
+        )
+
+        messages = [
+            {"role": "system", "content": system_prompt},
+            {"role": "user",  "content": user_prompt},
+        ]
+
+        # Stream model output
+        raw_stream = get_chat_completion_stream(
+            self.client,
+            settings.llm_model,
+            messages,
+        )
+
+        # Strip <think>...</think>, pass only visible text
+        stream = filter_thinking_chunks(raw_stream)
+
+        ai_message = Message(
+            role=RoleEnum.AI,
+            type=TypeEnum.CHECK_SOLUTION,
+            content="",                    # caller fills from `stream`
+        )
+
+        return stream, ai_message

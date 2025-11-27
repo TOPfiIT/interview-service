@@ -1,9 +1,11 @@
 from datetime import timedelta
+from typing import Any
 from src.domain.message.message import Message, RoleEnum, TypeEnum
 from src.domain.metrics.metrics import MetricsBlock1, MetricsBlock2
 from src.domain.task.task import Task, TaskType, TaskLanguage
 from src.domain.vacancy.vacancy import VacancyInfo
 from src.adapters.ai_chat.ai_utils.prompt_utils import load_prompt
+from src.domain.test.test import CodeTestSuite
 
 
 def _format_chat_history(chat_history: list[Message]) -> str:
@@ -298,4 +300,90 @@ def build_test_suite_user_prompt(
         task_language=task_language,
         task_description=task_description,
         total_tests=total_tests,
+    )
+
+# ---------- CHECK SOLUTION ----------
+
+def _format_test_suite(suite: CodeTestSuite) -> str:
+    """
+    Serialize CodeTestSuite into a compact, LLM-friendly text snippet.
+
+    Hidden tests are still fully shown here (server-side),
+    but the model is instructed not to reveal their details to the candidate.
+    """
+    lines: list[str] = []
+
+    total = len(suite.tests)
+    visible = sum(1 for t in suite.tests if not t.is_hidden)
+    hidden = total - visible
+
+    lines.append(f"total_tests: {total}")
+    lines.append(f"visible_tests: {visible}")
+    lines.append(f"hidden_tests: {hidden}")
+    lines.append("tests:")
+
+    for case in suite.tests:
+        # helper for optional fields
+        def _opt(value: Any) -> str:
+            return "(none)" if value is None else str(value)
+
+        lines.append(f"- id: {case.id}")
+        lines.append(f"  is_hidden: {case.is_hidden}")
+        lines.append(f"  status: {_opt(getattr(case, 'status', None))}")
+        lines.append(f"  correct: {_opt(case.correct)}")
+        lines.append("  input:")
+        lines.append("    " + "\n    ".join(case.input_data.splitlines() or ["(empty)"]))
+        lines.append("  expected_output:")
+        lines.append("    " + "\n    ".join(case.expected_output.splitlines() or ["(empty)"]))
+        lines.append("  stdout:")
+        lines.append("    " + "\n    ".join(_opt(getattr(case, 'stdout', None)).splitlines() or ["(none)"]))
+        lines.append("  stderr:")
+        lines.append("    " + "\n    ".join(_opt(getattr(case, 'stderr', None)).splitlines() or ["(none)"]))
+        lines.append("  exception:")
+        lines.append("    " + "\n    ".join(_opt(getattr(case, 'exception', None)).splitlines() or ["(none)"]))
+        lines.append(f"  execution_time_ms: {_opt(getattr(case, 'execution_time', None))}")
+
+    return "\n".join(lines)
+
+def build_check_solution_system_prompt() -> str:
+    """
+    Load the static system prompt for solution checking.
+    """
+    return load_prompt("system/check_solution_system_prompt.txt")
+
+def build_check_solution_user_prompt(
+    vacancy_info: VacancyInfo,
+    chat_history: list[Message],
+    task: Task,
+    solution: str,
+    test_suite: CodeTestSuite,
+) -> str:
+    """
+    Build the dynamic user prompt for the solution checker.
+
+    It includes:
+      - vacancy info,
+      - current task,
+      - candidate’s solution code,
+      - executed tests (with their results),
+      - full chat history.
+    """
+    template = load_prompt("user/check_solution_prompt.txt")
+
+    vacancy_str = str(vacancy_info)
+    history_str = _format_chat_history(chat_history)
+    tests_str = _format_test_suite(test_suite)
+
+    task_type = task.type.value
+    task_language = task.language.value if task.language is not None else "python"  # safe default
+    task_description = task.description
+
+    return template.format(
+        vacancy_info=vacancy_str,
+        task_type=task_type,
+        task_language=task_language,
+        task_description=task_description,
+        solution=solution,
+        test_suite=tests_str,
+        chat_history=history_str,
     )
