@@ -1,8 +1,8 @@
 import os
 import asyncio
-from typing import Any, AsyncGenerator, Coroutine
+from typing import AsyncGenerator
 import dotenv
-from openai import OpenAI
+from openai import AsyncOpenAI
 
 from src.adapters.ai_chat.ai_utils.map_enum import (
     map_user_type,
@@ -42,7 +42,7 @@ from src.usecases.interfaces.ai_chat import AIChatBase
 from src.adapters.ai_chat.ai_utils.json_parsers import (
     parse_metrics_block2,
     parse_metrics_block3,
-    parse_test_suite_json
+    parse_test_suite_json,
 )
 
 dotenv.load_dotenv()
@@ -53,41 +53,50 @@ class AIChat(AIChatBase):
     LLM-backed implementation of the interview chat, task, and metrics logic.
     """
 
-    def __init__(self):
+    def __init__(self) -> None:
         """
-        Initialize OpenAI-compatible client from settings.
+        Initialize OpenAI-compatible async client from settings.
         """
-        self.client = OpenAI(
+        self.client = AsyncOpenAI(
             api_key=settings.openai_api_key,
             base_url=settings.openai_base_url,
         )
+
+    # --------------------------------------------------------------------- #
+    # CHAT PLAN
+    # --------------------------------------------------------------------- #
 
     async def create_chat(
         self,
         vacancy_info: VacancyInfo,
         chat_history: list[Message],
-    ) -> tuple[VacancyInfo, AsyncGenerator[str, None]]:
+    ) -> VacancyInfo:
         """
         Generate or update the INTERNAL interview plan for the vacancy.
         """
         system_prompt = build_chat_plan_system_prompt()
         plan_prompt = build_chat_plan_prompt(vacancy_info)
+
         messages = [
             {"role": "system", "content": system_prompt},
             {"role": "user", "content": plan_prompt},
         ]
 
-        completion = self.client.chat.completions.create(
+        completion = await self.client.chat.completions.create(
             model=settings.llm_model,
             messages=messages,
         )
+
         interview_plan = completion.choices[0].message.content.strip()
         interview_plan = remove_thinking_part(interview_plan)
 
         updated_vacancy = vacancy_info
         updated_vacancy.interview_plan = interview_plan
-
         return updated_vacancy
+
+    # --------------------------------------------------------------------- #
+    # WELCOME MESSAGE
+    # --------------------------------------------------------------------- #
 
     async def generate_welcome_message(
         self,
@@ -105,7 +114,7 @@ class AIChat(AIChatBase):
             {"role": "user", "content": user_prompt},
         ]
 
-        raw_stream = get_chat_completion_stream(
+        raw_stream = await get_chat_completion_stream(
             self.client,
             settings.llm_model,
             messages,
@@ -113,6 +122,10 @@ class AIChat(AIChatBase):
 
         stream = filter_thinking_chunks(raw_stream)
         return stream
+
+    # --------------------------------------------------------------------- #
+    # CREATE RESPONSE
+    # --------------------------------------------------------------------- #
 
     async def create_response(
         self,
@@ -134,14 +147,14 @@ class AIChat(AIChatBase):
             {"role": "user", "content": user_prompt},
         ]
 
-        raw_stream = get_chat_completion_stream(
+        raw_stream = await get_chat_completion_stream(
             self.client,
             settings.llm_model,
             messages,
         )
 
         # TODO: Add error handling and retry handling for strip_think_and_ctrl
-        control, body_stream = strip_think_and_ctrl(raw_stream)
+        control, body_stream = await strip_think_and_ctrl(raw_stream)
 
         user_type = map_user_type(control.get("user_type"))
         assistant_type = map_assistant_type(control.get("assistant_type"))
@@ -160,6 +173,10 @@ class AIChat(AIChatBase):
 
         return body_stream, user_message, ai_message
 
+    # --------------------------------------------------------------------- #
+    # CREATE TASK
+    # --------------------------------------------------------------------- #
+
     async def create_task(
         self,
         vacancy_info: VacancyInfo,
@@ -176,14 +193,14 @@ class AIChat(AIChatBase):
             {"role": "user", "content": user_prompt},
         ]
 
-        raw_stream = get_chat_completion_stream(
+        raw_stream = await get_chat_completion_stream(
             self.client,
             settings.llm_model,
             messages,
         )
 
         # TODO: Add error handling and retry handling for strip_think_and_ctrl
-        control, body_stream = strip_think_and_ctrl(raw_stream)
+        control, body_stream = await strip_think_and_ctrl(raw_stream)
 
         task_type = map_task_type(control.get("task_type"))
         task_language = map_task_language(control.get("task_language"))
@@ -195,6 +212,10 @@ class AIChat(AIChatBase):
         )
 
         return body_stream, task
+
+    # --------------------------------------------------------------------- #
+    # METRICS (BLOCK 2 + BLOCK 3)
+    # --------------------------------------------------------------------- #
 
     async def create_metrics(
         self,
@@ -218,7 +239,7 @@ class AIChat(AIChatBase):
             {"role": "user", "content": user_prompt_b2},
         ]
 
-        completion_b2 = self.client.chat.completions.create(
+        completion_b2 = await self.client.chat.completions.create(
             model=settings.llm_model,
             messages=messages_b2,
         )
@@ -240,7 +261,7 @@ class AIChat(AIChatBase):
             {"role": "user", "content": user_prompt_b3},
         ]
 
-        completion_b3 = self.client.chat.completions.create(
+        completion_b3 = await self.client.chat.completions.create(
             model=settings.llm_model,
             messages=messages_b3,
         )
@@ -250,6 +271,10 @@ class AIChat(AIChatBase):
 
         return metrics_block1, metrics_block2, metrics_block3
 
+    # --------------------------------------------------------------------- #
+    # CREATE TEST SUITE
+    # --------------------------------------------------------------------- #
+
     async def create_test_suite(
         self,
         vacancy_info: VacancyInfo,
@@ -258,11 +283,8 @@ class AIChat(AIChatBase):
     ) -> CodeTestSuite:
         """
         Create a test suite for a coding task.
-
-        Uses the same streaming path as other heavy LLM calls to avoid long
-        blocking completions and 504 timeouts.
+        Uses streaming under the hood but accumulates into a single JSON string.
         """
-
         total_tests = settings.tests_per_task
 
         system_prompt = build_test_suite_system_prompt()
@@ -275,33 +297,32 @@ class AIChat(AIChatBase):
 
         messages = [
             {"role": "system", "content": system_prompt},
-            {"role": "user",  "content": user_prompt},
+            {"role": "user", "content": user_prompt},
         ]
 
-        # Use the same streaming helper as in other parts of the codebase
-        raw_stream = get_chat_completion_stream(
+        raw_stream = await get_chat_completion_stream(
             self.client,
             settings.llm_model,
             messages,
         )
 
-        # Collect all chunks into a single string
         chunks: list[str] = []
-        for chunk in raw_stream:
+        async for chunk in raw_stream:
             if chunk:
                 chunks.append(chunk)
 
-        # Remove optional <think>...</think> block if the model uses it
         response_text = remove_thinking_part("".join(chunks))
 
-        # Parse JSON into CodeTestSuite
-        # TODO: replace task_id with a meaningful value if/when you have it on Task
         suite = parse_test_suite_json(
             response_text,
             task_id=getattr(task, "id", "task_without_id"),
         )
 
         return suite
+
+    # --------------------------------------------------------------------- #
+    # CHECK SOLUTION
+    # --------------------------------------------------------------------- #
 
     async def check_solution(
         self,
@@ -313,22 +334,6 @@ class AIChat(AIChatBase):
     ) -> tuple[AsyncGenerator[str, None], Message]:
         """
         Check the solution for a coding task and stream feedback to the candidate.
-
-        The model:
-        - Sees vacancy_info, chat_history, task, candidate code, and executed tests.
-        - Decides whether this is the first check or a later one (based on chat_history).
-        - On first check: gives limited hints + mentions test status.
-        - On later checks: gives status and politely asks to move on, no new hints.
-        
-        How to use:
-        - stream all the text from the stream
-        - pass it back into AI message content
-        - add to the chat history
-
-        Returns:
-          - stream: async generator of feedback text chunks (with <think> stripped).
-          - ai_message: Message stub (role=AI, type=CHECK_SOLUTION, empty content).
-            Caller should accumulate streamed chunks into ai_message.content.
         """
         system_prompt = build_check_solution_system_prompt()
         user_prompt = build_check_solution_user_prompt(
@@ -341,11 +346,10 @@ class AIChat(AIChatBase):
 
         messages = [
             {"role": "system", "content": system_prompt},
-            {"role": "user",  "content": user_prompt},
+            {"role": "user", "content": user_prompt},
         ]
 
-        # Stream model output
-        raw_stream = get_chat_completion_stream(
+        raw_stream = await get_chat_completion_stream(
             self.client,
             settings.llm_model,
             messages,
@@ -357,7 +361,7 @@ class AIChat(AIChatBase):
         ai_message = Message(
             role=RoleEnum.AI,
             type=TypeEnum.CHECK_SOLUTION,
-            content="",                    # caller fills from `stream`
+            content="",  # caller fills from `stream`
         )
 
         return stream, ai_message
