@@ -1,24 +1,35 @@
 from typing import Generator, List, Dict, Any
 from src.core.setting import settings
-def get_chat_completion_stream(
-    client: Any,
+from collections.abc import AsyncGenerator
+from typing import Dict, List
+from openai import AsyncOpenAI
+
+async def get_chat_completion_stream(
+    client: AsyncOpenAI,
     model: str,
     messages: List[Dict[str, str]],
-) -> Generator[str, None, None]:
+) -> AsyncGenerator[str, None]:
     """
-    Yields content chunks from an OpenAI chat completion stream.
+    Call OpenAI Chat Completions in streaming mode and yield *text chunks*.
+
+    Usage:
+        raw_stream = await get_chat_completion_stream(client, model, messages)
+        async for chunk in raw_stream:
+            ...
     """
-    with client.chat.completions.stream(
+    stream = await client.chat.completions.create(
         model=model,
         messages=messages,
-    ) as stream:
-        for event in stream:
-            if event.type == "chunk":
-                # Access the delta content safely
-                if hasattr(event, 'chunk') and event.chunk.choices:
-                    delta = getattr(event.chunk.choices[0].delta, "content", None)
-                    if delta:
-                        yield delta
+        stream=True,
+    )
+
+    async def gen() -> AsyncGenerator[str, None]:
+        async for event in stream:
+            delta = event.choices[0].delta.content
+            if delta:
+                yield delta
+
+    return gen()
 
 def get_chat_completion(
     client: Any,
