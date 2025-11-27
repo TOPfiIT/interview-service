@@ -74,6 +74,18 @@ class Settings(BaseSettings):
         alias="TESTS_PER_TASK",
         validation_alias="TESTS_PER_TASK",
     )
+    code_run_service_url: str = Field(
+        default="onecompiler-apis.p.rapidapi.com",
+        description="Code run service URL",
+        alias="CODE_RUN_SERVICE_URL",
+        validation_alias="CODE_RUN_SERVICE_URL",
+    )
+    code_run_service_api_key: str = Field(
+        default="",
+        description="Code run service API key",
+        alias="CODE_RUN_SERVICE_API_KEY",
+        validation_alias="CODE_RUN_SERVICE_API_KEY",
+    )
 
 
 settings = Settings()

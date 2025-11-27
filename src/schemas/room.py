@@ -45,3 +45,22 @@ class TaskMetadata(BaseModel):
 
 class QuestionSendRequest(BaseModel):
     question: str
+
+
+class RunCodeRequest(BaseModel):
+    code: str
+    language: str
+
+
+class CodeRunResponse(BaseModel):
+    input_data: str
+    expected_output: str
+
+    correct: bool = False
+
+    status: str | None = None
+    exception: str | None = None
+    stdin: str | None = None
+    stdout: str | None = None
+    stderr: str | None = None
+    execution_time: int | None = None

@@ -1,6 +1,7 @@
 from src.domain.message.message import Message, RoleEnum, TypeEnum
 from src.domain.room.room import Room, Solution, SolutionType, Interviewee
-from src.domain.task.task import Task, TaskMetadata
+from src.domain.task.task import Task, TaskMetadata, TaskType
+from src.domain.test.test import CodeTestCase, CodeTestSuite
 from src.domain.vacancy.vacancy import VacancyInfo
 from uuid import UUID, uuid4
 from src.usecases.interfaces.interview_service import InterviewServiceBase
@@ -12,6 +13,8 @@ from datetime import datetime, timedelta
 from loguru import logger
 from src.domain.metrics.metrics import MetricsBlock1
 
+from src.usecases.interfaces.code_run_service import CodeRunServiceBase
+from src.domain.test.run_result import RunResult
 from datetime import datetime
 
 
@@ -33,9 +36,11 @@ class InterviewService(InterviewServiceBase):
         self,
         vacancy_service: VacancyServiceBase,
         ai_chat: AIChatBase,
+        code_run_service: CodeRunServiceBase,
     ):
         self.vacancy_service = vacancy_service
         self.ai_chat = ai_chat
+        self.code_run_service = code_run_service
 
     async def create_room(self, vacancy_id: UUID, interviewee: Interviewee) -> Room:
         """
@@ -67,6 +72,7 @@ class InterviewService(InterviewServiceBase):
                 answers_count=0,
                 copy_paste_suspicion=0,
             ),
+            current_test_suite=None,
         )
 
         InterviewService._room_sessions[room.id] = room
@@ -127,6 +133,45 @@ class InterviewService(InterviewServiceBase):
             )
         )
 
+    async def run_code(
+        self, room_id: UUID, language: str, code: str
+    ) -> list[CodeTestCase]:
+        """
+        Run code in a language
+        """
+
+        logger.info(f"Running code in {language}")
+
+        room: Room = InterviewService._room_sessions[room_id]
+        if room.current_test_suite is None:
+            logger.error("No test suite found")
+            raise Exception("No test suite found")
+
+        not_hidden_tests = [
+            test for test in room.current_test_suite.tests if not test.is_hidden
+        ]
+
+        async def run_test(test: CodeTestCase) -> CodeTestCase:
+            logger.info(f"Running test {test.id}")
+            result = await self.code_run_service.run_code(
+                language, test.input_data, code
+            )
+
+            test.status = result.status
+            test.exception = result.exception
+            test.stdin = result.stdin
+            test.stdout = result.stdout
+            test.stderr = result.stderr
+            test.execution_time = result.execution_time
+            test.correct = test.expected_output.strip() == (result.stdout or "").strip()
+
+            return test
+
+        test_runs = [run_test(run) for run in not_hidden_tests]
+        run_results: list[CodeTestCase] = await asyncio.gather(*test_runs)
+
+        return run_results
+
     async def get_solution_response(self, room_id: UUID) -> AsyncGenerator[str, None]:
         """
         Gets the solution response for the room with the given id
@@ -169,6 +214,13 @@ class InterviewService(InterviewServiceBase):
         )
         room.vacancy_info.tasks.append(task)
         room.tasks.append(task)
+
+        if task.type == TaskType.CODE:
+            room.current_test_suite = await self.ai_chat.create_test_suite(
+                room.vacancy_info,
+                room.chat_history,
+                task,
+            )
 
     async def get_current_task_metadata(self, room_id: UUID) -> TaskMetadata:
         """

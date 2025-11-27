@@ -2,6 +2,7 @@ from typing import Any, Protocol
 from src.domain.vacancy.vacancy import VacancyInfo
 from src.domain.room.room import Room, Solution, Interviewee
 from src.domain.task.task import Task, TaskMetadata
+from src.domain.test.test import CodeTestCase
 from uuid import UUID
 from typing import AsyncGenerator
 
@@ -70,5 +71,13 @@ class InterviewServiceBase(Protocol):
     async def stop_room(self, room_id: UUID) -> None:
         """
         Stops the room with the given id
+        """
+        ...
+
+    async def run_code(
+        self, room_id: UUID, language: str, code: str
+    ) -> list[CodeTestCase]:
+        """
+        Run code in a language
         """
         ...

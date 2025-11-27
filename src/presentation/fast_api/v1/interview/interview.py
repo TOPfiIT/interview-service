@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Depends, Response, Request, HTTPException
 from fastapi.responses import StreamingResponse
 from src.domain.room.room import Interviewee, Solution, SolutionType
+from src.domain.test.test import CodeTestCase
 from src.schemas.room import (
     InterviewRoom,
     QuestionSentResponse,
@@ -10,6 +11,8 @@ from src.schemas.room import (
     Message,
     TaskMetadata,
     QuestionSendRequest,
+    CodeRunResponse,
+    RunCodeRequest,
 )
 from src.schemas.interiewee import CreatedRoomRequest
 from src.usecases.interfaces.interview_service import InterviewServiceBase
@@ -624,6 +627,44 @@ async def get_current_task_metadata(
             type=task_metadata.type,
             language=str(task_metadata.language),
         )
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post(
+    "/room/run",
+    description="Run code",
+    tags=["Interview"],
+    summary="Run code",
+    response_model=list[CodeRunResponse],
+)
+async def run_code(
+    request: Request,
+    run_request: RunCodeRequest,
+    interview_service: InterviewServiceBase = Depends(),
+) -> list[CodeRunResponse]:
+    try:
+        logger.info("Running code")
+        room_id: UUID = UUID(request.cookies.get("room_id"))
+        results: list[CodeTestCase] = await interview_service.run_code(
+            room_id, run_request.language, run_request.code
+        )
+
+        return [
+            CodeRunResponse(
+                input_data=result.input_data,
+                expected_output=result.expected_output,
+                correct=result.correct or False,
+                status=result.status,
+                exception=result.exception,
+                stdin=result.stdin,
+                stdout=result.stdout,
+                stderr=result.stderr,
+                execution_time=result.execution_time,
+            )
+            for result in results
+        ]
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))

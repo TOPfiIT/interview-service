@@ -6,6 +6,7 @@ from src.domain.task.task import Task
 from src.domain.message.message import Message
 from datetime import timedelta
 from datetime import datetime
+from src.domain.test.test import CodeTestSuite
 
 from enum import Enum
 
@@ -62,3 +63,4 @@ class Room:
     last_task_time: datetime
 
     metrics_block1: MetricsBlock1
+    current_test_suite: CodeTestSuite | None
