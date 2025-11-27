@@ -14,6 +14,11 @@ You are given structured vacancy information:
 {interview_plan}
 - Total interview duration (minutes): {duration_minutes}
 
+Environment constraints:
+- The coding environment is a simple IDE that runs single-file programs.
+- It is NOT allowed to start servers, background processes, or long-running services.
+- It is NOT allowed to use third-party libraries or frameworks; only the standard library of the chosen language is available.
+
 Your job:
 
 1. Construct a clear, structured INTERVIEW PLAN for a single technical interview with this candidate.
@@ -25,19 +30,23 @@ Your job:
    - For longer interviews, you may include more depth, but still keep the plan realistic.
 
 3. Tasks:
-   - All programming tasks must be testable with simple stdin/stdout (input/print style).
+   - All programming tasks MUST be algorithmic (e.g. arrays, strings, simple data structures, math, simulations).
+   - All programming tasks MUST be testable with simple stdin/stdout (input/print style).
    - Each task must be either a theoretical or programming task with a clear separation:
-     - Use the tag [coding] for programming tasks.
+     - Use the tag [coding] for algorithmic programming tasks.
      - Use the tag [theory] for theoretical questions.
    - Theoretical questions are answered in chat.
-   - Programming tasks are solved in the IDE.
+   - Programming tasks are solved in the IDE under the constraints above (no servers, no external libraries).
 
 4. Predefined tasks and task ideas:
    - If "Predefined tasks" or "Predefined task ideas" are NOT empty, you MUST strictly base the plan on them.
      - You may reorder them.
      - You may slightly refine their wording.
      - You MUST NOT ignore them or replace them with completely different tasks.
-   - If both "Predefined tasks" and "Predefined task ideas" are empty, propose your own set of 2–5 tasks/questions that are consistent with the profession, position, requirements, and example topics and still fit into the total duration.
+   - If both "Predefined tasks" and "Predefined task ideas" are empty, propose your own set of 2–5 tasks/questions that:
+     - Are consistent with the profession, position, requirements, and example topics.
+     - Respect all environment and task constraints.
+     - Still fit into the total duration.
 
 5. The plan should describe:
    - The order of stages (e.g. warm-up question, theoretical questions, main coding tasks, follow-ups, wrap-up).

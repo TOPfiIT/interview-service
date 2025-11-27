@@ -12,10 +12,18 @@ Chat history between interviewer and candidate (oldest → newest):
 Supported coding languages for tasks:
 {supported_languages}
 
+Environment constraints:
+- The coding environment is a simple IDE that runs single-file programs.
+- It is NOT allowed to start servers, background processes, or long-running services.
+- It is NOT allowed to use third-party libraries or frameworks; only the standard library of the chosen language is available.
+- All coding tasks MUST be algorithmic (arrays, strings, math, simple data structures, simulations, etc.), not web/GUI/DB/server tasks.
+- All coding tasks MUST be testable via simple stdin/stdout (input from stdin, output via print).
+
 Use the plan and chat history to decide which task should be given now:
 - Follow the order and intent of the plan.
 - Skip tasks that have already been asked or clearly solved.
 - Do not invent unrelated tasks.
+- Ensure that any coding task you select respects all environment constraints above.
 
 Then:
 
@@ -29,13 +37,17 @@ Then:
 
 2) Output the control header:
    - First output:
-     <ctrl>{{"task_type":"...","task_language":"..."}}</ctrl>
+     <ctrl>{"task_type":"...","task_language":"..."}</ctrl>
    - Fill the two fields according to your choice.
    - Do not add any other fields.
 
 3) Immediately after </ctrl>, output the task description that will be shown to the candidate:
-   - For coding tasks: clearly state what input is given and what output is required so the solution can be tested via stdin/stdout.
-   - For theoretical tasks: ask a clear question or give a short prompt that requires an explanation.
+   - For coding tasks:
+     - Clearly state what input is given and what output is required.
+     - Make it explicit that the solution will read from stdin and write to stdout.
+     - The task must be a pure algorithmic problem that does not require servers, networking, databases, or third-party libraries.
+   - For theoretical tasks:
+     - Ask a clear question or give a short prompt that requires an explanation.
 
 Do not:
 - Mention the internal plan.
@@ -44,5 +56,5 @@ Do not:
 - Greet the candidate or start a conversation.
 
 Your final output must consist of:
-1) The <ctrl>{{"task_type":"...","task_language":"..."}}</ctrl> header.
+1) The <ctrl>{"task_type":"...","task_language":"..."}</ctrl> header.
 2) The task description text.
