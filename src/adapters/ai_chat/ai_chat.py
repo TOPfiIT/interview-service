@@ -26,20 +26,22 @@ from src.adapters.ai_chat.ai_utils.prompt_builders import (
     build_metrics_block2_user_prompt,
     build_metrics_block3_system_prompt,
     build_metrics_block3_user_prompt,
-    build_response_system_prompt,
-    build_response_user_prompt,
     build_chat_welcome_user_prompt,
+    build_test_suite_system_prompt,
+    build_test_suite_user_prompt,
 )
 from src.adapters.ai_chat.ai_utils.streams import strip_think_and_ctrl, filter_thinking_chunks
 from src.domain.message.message import Message
 from src.domain.metrics.metrics import MetricsBlock1, MetricsBlock2, MetricsBlock3
 from src.domain.task.task import Task
+from src.domain.test.test import CodeTestSuite
 from src.domain.vacancy.vacancy import VacancyInfo
 from src.usecases.interfaces.ai_chat import AIChatBase
 from src.domain.message.message import RoleEnum
-from src.adapters.ai_chat.ai_utils.metric_parsers import (
+from src.adapters.ai_chat.ai_utils.json_parsers import (
     parse_metrics_block2,
     parse_metrics_block3,
+    parse_test_suite_json
 )
 
 dotenv.load_dotenv()
@@ -246,3 +248,56 @@ class AIChat(AIChatBase):
         metrics_block3 = parse_metrics_block3(raw_json_b3)
 
         return metrics_block1, metrics_block2, metrics_block3
+
+    async def create_test_suite(
+        self,
+        vacancy_info: VacancyInfo,
+        chat_history: list[Message],
+        task: Task,
+    ) -> CodeTestSuite:
+        """
+        Create a test suite for a coding task.
+
+        Uses the same streaming path as other heavy LLM calls to avoid long
+        blocking completions and 504 timeouts.
+        """
+
+        total_tests = settings.tests_per_task
+
+        system_prompt = build_test_suite_system_prompt()
+        user_prompt = build_test_suite_user_prompt(
+            vacancy_info=vacancy_info,
+            chat_history=chat_history,
+            task=task,
+            total_tests=total_tests,
+        )
+
+        messages = [
+            {"role": "system", "content": system_prompt},
+            {"role": "user",  "content": user_prompt},
+        ]
+
+        # Use the same streaming helper as in other parts of the codebase
+        raw_stream = get_chat_completion_stream(
+            self.client,
+            settings.llm_model,
+            messages,
+        )
+
+        # Collect all chunks into a single string
+        chunks: list[str] = []
+        for chunk in raw_stream:
+            if chunk:
+                chunks.append(chunk)
+
+        # Remove optional <think>...</think> block if the model uses it
+        response_text = remove_thinking_part("".join(chunks))
+
+        # Parse JSON into CodeTestSuite
+        # TODO: replace task_id with a meaningful value if/when you have it on Task
+        suite = parse_test_suite_json(
+            response_text,
+            task_id=getattr(task, "id", "task_without_id"),
+        )
+
+        return suite

@@ -68,6 +68,12 @@ class Settings(BaseSettings):
         alias="VACANCY_SERVICE_URL",
         validation_alias="VACANCY_SERVICE_URL",
     )
+    tests_per_task: int = Field(
+        default=10,
+        description="Tests per task",
+        alias="TESTS_PER_TASK",
+        validation_alias="TESTS_PER_TASK",
+    )
 
 
 settings = Settings()

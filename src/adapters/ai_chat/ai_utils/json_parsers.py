@@ -9,6 +9,7 @@ from src.domain.metrics.metrics import (
     SeniorityGuess,
     Recommendation,
 )
+from src.domain.test.test import CodeTestCase, CodeTestSuite
 
 
 def _strip_markdown_fences(s: str) -> str:
@@ -143,3 +144,81 @@ def parse_metrics_block3(json_obj: str | dict[str, Any]) -> MetricsBlock3:
         seniority_guess=SeniorityGuess(seniority_str),
         recommendation=Recommendation(recommendation_str),
     )
+
+
+def parse_test_suite_json(
+    json_obj: str | dict[str, Any],
+    task_id: str,
+) -> CodeTestSuite:
+    """
+    Parse LLM JSON into CodeTestSuite.
+
+    Expected top-level shape:
+
+      {
+        "tests": [
+          {
+            "id": "t1",
+            "input_data": "stdin string",
+            "expected_output": "stdout string",
+            "is_hidden": false
+          },
+          ...
+        ]
+      }
+
+    Notes:
+    - "id" is required, but if missing we auto-generate "t1", "t2", ...
+    - "is_hidden" defaults to False if missing, and is normalized to bool
+      (accepts true/false/1/0/yes/no as strings).
+    """
+
+    data = _load_json(json_obj)
+
+    # Ensure we have tests array
+    if "tests" not in data or not isinstance(data["tests"], list):
+        raise ValueError("Test suite JSON must contain a 'tests' array")
+
+    raw_tests = data["tests"]
+    if not raw_tests:
+        raise ValueError("Test suite JSON contains an empty 'tests' list")
+
+    tests: list[CodeTestCase] = []
+
+    for i, t in enumerate(raw_tests):
+        if not isinstance(t, dict):
+            raise ValueError(f"Test #{i} must be a JSON object, got {type(t)}")
+
+        # id
+        test_id = t.get("id")
+        if not test_id:
+            test_id = f"t{i + 1}"
+        test_id = str(test_id)
+
+        # input / output as strings
+        input_data = str(t.get("input_data", ""))
+        expected_output = str(t.get("expected_output", ""))
+
+        # is_hidden normalization
+        raw_hidden = t.get("is_hidden", False)
+        if isinstance(raw_hidden, str):
+            val = raw_hidden.strip().lower()
+            if val in {"true", "1", "yes"}:
+                is_hidden = True
+            elif val in {"false", "0", "no"}:
+                is_hidden = False
+            else:
+                raise ValueError(f"Invalid is_hidden value in test '{test_id}': {raw_hidden}")
+        else:
+            is_hidden = bool(raw_hidden)
+
+        tests.append(
+            CodeTestCase(
+                id=test_id,
+                input_data=input_data,
+                expected_output=expected_output,
+                is_hidden=is_hidden,
+            )
+        )
+
+    return CodeTestSuite(task_id=task_id, tests=tests)
